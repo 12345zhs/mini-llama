@@ -227,7 +227,7 @@ Tensor Tensor::ReshapeChecked(const std::vector<int>& new_shape, const char* cal
 }
 
 // 打印张量信息
-void Tensor::Print(const std::string& name = "", bool print_data = false) const {
+void Tensor::Print(const std::string& name, bool print_data) const {
     if (!name.empty()) {
         std::cout << name << " ";
     }
@@ -242,4 +242,22 @@ void Tensor::Print(const std::string& name = "", bool print_data = false) const 
         std::cout << std::endl;
     }
 }
+
+
+Tensor MakeTensor1D(int d0, float fill) {
+    return Tensor({d0}, fill);
+}
+
+Tensor MakeTensor2D(int d0, int d1, float fill) {
+    return Tensor({d0, d1}, fill);
+}
+
+Tensor MakeTensor3D(int d0, int d1, int d2, float fill) {
+    return Tensor({d0, d1, d2}, fill);
+}
+
+Tensor MakeTensor4D(int d0, int d1, int d2, int d3, float fill) {
+    return Tensor({d0, d1, d2, d3}, fill);
+}
+
 }

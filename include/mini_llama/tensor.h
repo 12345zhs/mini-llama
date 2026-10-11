@@ -81,4 +81,12 @@ struct Tensor {
     void Print(const std::string& name = "", bool print_data = false) const;
 };
 
+
+// 创建张量的辅助函数
+Tensor MakeTensor1D(int d0, float fill = 0.0f);
+Tensor MakeTensor2D(int d0, int d1, float fill = 0.0f);
+Tensor MakeTensor3D(int d0, int d1, int d2, float fill = 0.0f);
+Tensor MakeTensor4D(int d0, int d1, int d2, int d3, float fill = 0.0f);
+
+
 }
