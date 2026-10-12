@@ -1,4 +1,3 @@
-#pragma once
 #include "mini_llama/tensor.h"
 
 #include <vector>

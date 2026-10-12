@@ -1,5 +1,6 @@
 #include "mini_llama/ops.h"
 #include "mini_llama/tensor.h"
+#include "mini_llama/matmul_dispatch.h"
 
 #include <stdexcept>
 #include <cmath>
@@ -9,11 +10,11 @@ namespace mini_llama {
 
 
 Tensor Matmul(const Tensor& a, const Tensor& b) {
-    
+    return MatmulDispatch(a, b, DefaultMatmulMode());
 }
 
 Tensor Linear(const Tensor& x, const Tensor& weight) {
-    
+    return LinearDispatch(x, weight, DefaultMatmulMode());
 }
 
 
@@ -46,7 +47,7 @@ Tensor RmsNorm(const Tensor& x, const Tensor& weight, float eps) {
 }
 
 // Softmax: y[i] = exp(x[i]) / sum(exp(x[j])) for j in 0..n-1                                       
-Tensor Softmaxx(const Tensor& x) {
+Tensor Softmax(const Tensor& x) {
     if (x.num_dims() != 1) {
         throw std::runtime_error("Softmax: expected 1D tensor, got " + x.ShapeToStringShort());
     }
@@ -164,7 +165,7 @@ void Rope(Tensor& q, Tensor& k, int pos, float theta, RopeType rope_type) {
     }    
 
     if (pos < 0) {
-        throw std::runtime_error("Rope: position must be positive");
+        throw std::out_of_range("Rope: position must be positive");
     }
 
     // theta是有限值并且大于零
