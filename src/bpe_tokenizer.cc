@@ -285,7 +285,7 @@ bool BpeTokenizer::Load(const std::string& vocab_path, const std::string& merges
             }
         }
 
-        if (!vocab_.empty()) {
+        if (vocab_.empty()) {
             std::cerr << "Vocab is empty" << std::endl;
             return false;
         }
@@ -381,12 +381,13 @@ bool BpeTokenizer::Load(const std::string& vocab_path, const std::string& merges
               << "bos = " << bos_id_
               << "eos = " << eos_id_
               << "unk = " << unk_id_ << std::endl;
+    return true;
 }
 
 
 
 std::vector<int> BpeTokenizer::Encode(const std::string& text) const {
-    if (!text.empty()) {
+    if (text.empty()) {
         return {};
     }
 
@@ -398,7 +399,7 @@ std::vector<int> BpeTokenizer::Encode(const std::string& text) const {
         // 优先处理special token
         for (const auto& st : special_tokens_) {
             const std::string& token_str = st.first;
-            if (pos + token_str.size() < text.size() && std::memcmp(text.data() + pos, token_str.data(), token_str.size()) == 0) {
+            if (pos + token_str.size() <= text.size() && std::memcmp(text.data() + pos, token_str.data(), token_str.size()) == 0) {
                 result.push_back(st.second);
                 pos += token_str.size();
                 is_match = true;

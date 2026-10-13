@@ -1,0 +1,227 @@
+{
+  "config": {
+    "vocab_size": 128,
+    "dim": 32,
+    "hidden_dim": 86,
+    "n_layers": 2,
+    "n_heads": 4,
+    "n_kv_heads": 4,
+    "max_seq_len": 128,
+    "rope_theta": 10000.0,
+    "rms_norm_eps": 1e-05
+  },
+  "tokenizer": {
+    "type": "json_vocab",
+    "path": "vocab.json",
+    "bos_id": 1,
+    "eos_id": 2,
+    "unk_id": 0
+  },
+  "tensors": [
+    {
+      "name": "token_embedding",
+      "shape": [
+        128,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 0,
+      "byte_size": 16384
+    },
+    {
+      "name": "layers.0.attention_norm",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "offset": 16384,
+      "byte_size": 128
+    },
+    {
+      "name": "layers.0.wq",
+      "shape": [
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 16512,
+      "byte_size": 4096
+    },
+    {
+      "name": "layers.0.wk",
+      "shape": [
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 20608,
+      "byte_size": 4096
+    },
+    {
+      "name": "layers.0.wv",
+      "shape": [
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 24704,
+      "byte_size": 4096
+    },
+    {
+      "name": "layers.0.wo",
+      "shape": [
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 28800,
+      "byte_size": 4096
+    },
+    {
+      "name": "layers.0.ffn_norm",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "offset": 32896,
+      "byte_size": 128
+    },
+    {
+      "name": "layers.0.w_gate",
+      "shape": [
+        86,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 33024,
+      "byte_size": 11008
+    },
+    {
+      "name": "layers.0.w_up",
+      "shape": [
+        86,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 44032,
+      "byte_size": 11008
+    },
+    {
+      "name": "layers.0.w_down",
+      "shape": [
+        32,
+        86
+      ],
+      "dtype": "float32",
+      "offset": 55040,
+      "byte_size": 11008
+    },
+    {
+      "name": "layers.1.attention_norm",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "offset": 66048,
+      "byte_size": 128
+    },
+    {
+      "name": "layers.1.wq",
+      "shape": [
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 66176,
+      "byte_size": 4096
+    },
+    {
+      "name": "layers.1.wk",
+      "shape": [
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 70272,
+      "byte_size": 4096
+    },
+    {
+      "name": "layers.1.wv",
+      "shape": [
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 74368,
+      "byte_size": 4096
+    },
+    {
+      "name": "layers.1.wo",
+      "shape": [
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 78464,
+      "byte_size": 4096
+    },
+    {
+      "name": "layers.1.ffn_norm",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "offset": 82560,
+      "byte_size": 128
+    },
+    {
+      "name": "layers.1.w_gate",
+      "shape": [
+        86,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 82688,
+      "byte_size": 11008
+    },
+    {
+      "name": "layers.1.w_up",
+      "shape": [
+        86,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 93696,
+      "byte_size": 11008
+    },
+    {
+      "name": "layers.1.w_down",
+      "shape": [
+        32,
+        86
+      ],
+      "dtype": "float32",
+      "offset": 104704,
+      "byte_size": 11008
+    },
+    {
+      "name": "final_norm",
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "offset": 115712,
+      "byte_size": 128
+    },
+    {
+      "name": "lm_head",
+      "shape": [
+        128,
+        32
+      ],
+      "dtype": "float32",
+      "offset": 115840,
+      "byte_size": 16384
+    }
+  ]
+}

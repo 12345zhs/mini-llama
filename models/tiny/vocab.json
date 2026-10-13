@@ -1,0 +1,16 @@
+[
+  {"id": 0, "content": "<unk>", "special": true},
+  {"id": 1, "content": "<bos>", "special": true},
+  {"id": 2, "content": "<eos>", "special": true},
+  {"id": 32, "content": " ", "special": false},
+  {"id": 33, "content": "!", "special": false},
+  {"id": 97, "content": "a", "special": false},
+  {"id": 101, "content": "e", "special": false},
+  {"id": 104, "content": "h", "special": false},
+  {"id": 105, "content": "i", "special": false},
+  {"id": 108, "content": "l", "special": false},
+  {"id": 109, "content": "m", "special": false},
+  {"id": 110, "content": "n", "special": false},
+  {"id": 111, "content": "o", "special": false},
+  {"id": 127, "content": "", "special": false}
+]

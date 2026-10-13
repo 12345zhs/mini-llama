@@ -2,6 +2,7 @@
 
 #include "mini_llama/tensor.h"
 #include "mini_llama/ops.h"
+#include "mini_llama/tokenizer.h"
 
 
 // tensor
@@ -22,3 +23,11 @@ using mini_llama::SwiGlu;
 using mini_llama::Rope;
 using mini_llama::RopeType;
 using mini_llama::ArgMax;
+
+// Tokenizer
+using mini_llama::AsciiTokenizer;
+using mini_llama::JsonVocabTokenizer;
+using mini_llama::CreateTokenizer;
+using mini_llama::CreateBpeTokenizer;
+using mini_llama::BpeTokenizer;
+using mini_llama::ITokenizer;

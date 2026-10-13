@@ -17,7 +17,7 @@ std::vector<int> AsciiTokenizer::Encode(const std::string& text) const {
 }
 
 std::string AsciiTokenizer::DecodeToken(int token) const {
-    if (token = bos_id()) {
+    if (token == bos_id()) {
         return "<bos>";
     }
     if (token == eos_id()) {

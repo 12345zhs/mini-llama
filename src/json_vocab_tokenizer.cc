@@ -228,7 +228,7 @@ JsonVocabTokenizer::JsonVocabTokenizer(const std::string& vocab_path) {
         }
 
         if (static_cast<size_t>(entry.id) >= id_to_entry_.size()) {
-            id_to_entry_.reserve(entry.id + 1);
+            id_to_entry_.resize(static_cast<size_t>(entry.id) + 1);
         }
         id_to_entry_[entry.id] = entry;
         content_to_id_.push_back({entry.content, entry.id});
@@ -306,7 +306,7 @@ int JsonVocabTokenizer::unk_id() const {
 
 
 // 工厂模式，决定使用JsonVocabTokenizer/AsciiTokenizer
-std::unique_ptr<ITokenizer> CreateToenizer(const std::string vocab_path) {
+std::unique_ptr<ITokenizer> CreateTokenizer(const std::string vocab_path) {
     if (!vocab_path.empty()) {
         std::ifstream f(vocab_path);
         if (f.good()) {
