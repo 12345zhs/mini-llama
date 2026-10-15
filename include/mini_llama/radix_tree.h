@@ -36,7 +36,7 @@ private:
 
     void InsertInto(Node* parent, std::vector<int> suffix);    
 
-    Node* root_;
+    Node root_;
     size_t terminal_count_ = 0;
 };
 

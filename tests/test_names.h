@@ -3,6 +3,9 @@
 #include "mini_llama/tensor.h"
 #include "mini_llama/ops.h"
 #include "mini_llama/tokenizer.h"
+#include "mini_llama/kv_cache.h"
+#include "mini_llama/radix_tree.h" 
+#include "mini_llama/request_context.h"
 
 
 // tensor
@@ -31,3 +34,17 @@ using mini_llama::CreateTokenizer;
 using mini_llama::CreateBpeTokenizer;
 using mini_llama::BpeTokenizer;
 using mini_llama::ITokenizer;
+
+
+
+// kv_cache
+using mini_llama::KvCache;
+
+// radix_tree
+using mini_llama::RadixTree;
+
+// request_context
+using mini_llama::RequestContext;
+using mini_llama::StartRequest;
+using mini_llama::FormatRequestTraceSummary;
+using mini_llama::FormatRequestTraceEvents;

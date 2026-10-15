@@ -17,6 +17,8 @@ set(MINI_LLAMA_CORE_SOURCES
     src/tokenizer.cc
     src/json_vocab_tokenizer.cc
     src/bpe_tokenizer.cc
+    src/radix_tree.cc
+    src/request_context.cc
 )
 
 
@@ -27,6 +29,8 @@ set(TEST_SOURCES
     tests/test_tensor.cc
     tests/test_ops.cc
     tests/test_tokenizer.cc
+    tests/test_radix_tree.cc
+    tests/test_request_context.cc
 )
 
 # 建立可执行文件

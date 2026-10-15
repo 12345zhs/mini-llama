@@ -29,7 +29,7 @@ struct RequestContext {
     int prompt_tokens = 0;
     int prefill_tokens = 0;
     int decode_tokens = 0;
-    int generated_token = 0;
+    int generated_tokens = 0;
 
     double model_load_ms = 0.0;
     double tokenizer_ms = 0.0;

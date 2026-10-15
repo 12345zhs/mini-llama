@@ -30,13 +30,13 @@ size_t RadixTree::size() const {
 void RadixTree::Insert(const std::vector<int>& tokens) {
     // 空序列
     if (tokens.empty()) {
-        if (!root_->terminal) {
-            root_->terminal = true;
+        if (!root_.terminal) {
+            root_.terminal = true;
             ++terminal_count_;
         }
         return;
     }
-    InsertInto(root_, tokens);
+    InsertInto(&root_, tokens);
 }
 
 // 最长前缀查找函数

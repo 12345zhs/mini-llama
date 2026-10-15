@@ -76,24 +76,24 @@ RequestContext StartRequest(const std::string& mode, const std::string& backend,
 // 汇总摘要
 std::string FormatRequestTraceSummary(const RequestContext& request) {
     std::ostringstream out;
-    out << "trace summary: trace_id = " << request.trace_id 
-        << " mode = " << request.mode
-        << " status = " << (request.ok() ? "ok" : "error")
-        << " bankend = " << request.backend
-        << " model = " << request.model_path
-        << " prompt_tokens = " << request.prompt_tokens
-        << " prefill_tokens = " << request.prefill_tokens
-        << " decode_tokens = " << request.decode_tokens
-        << " generated_tokens = " << request.generated_token
-        << " model_load_ms = " << FormatMs(request.model_load_ms)
-        << " tokenizer_ms = " << FormatMs(request.tokenizer_ms)
-        << " prefill_ms = " << FormatMs(request.prefill_ms)
-        << " decode_ms = " << FormatMs(request.decode_ms)
-        << " sample_ms = " <<  FormatMs(request.sample_ms)
-        << " total_ms = " << FormatMs(request.total_ms);
+    out << "trace summary: trace_id=" << request.trace_id 
+        << " mode=" << request.mode
+        << " status=" << (request.ok() ? "ok" : "error")
+        << " backend=" << request.backend
+        << " model=" << request.model_path
+        << " prompt_tokens=" << request.prompt_tokens
+        << " prefill_tokens=" << request.prefill_tokens
+        << " decode_tokens=" << request.decode_tokens
+        << " generated_tokens=" << request.generated_tokens
+        << " model_load_ms=" << FormatMs(request.model_load_ms)
+        << " tokenizer_ms=" << FormatMs(request.tokenizer_ms)
+        << " prefill_ms=" << FormatMs(request.prefill_ms)
+        << " decode_ms=" << FormatMs(request.decode_ms)
+        << " sample_ms=" <<  FormatMs(request.sample_ms)
+        << " total_ms=" << FormatMs(request.total_ms);
     
     if (!request.error.empty()) {
-        out << " error = \"" << request.error << "\"";
+        out << " error=\"" << request.error << "\"";
     }
     return out.str();
 }
@@ -106,13 +106,13 @@ std::vector<std::string> FormatRequestTraceEvents(const RequestContext& request)
     lines.reserve(request.events.size());   // 每个事件格式化一行
     for (const TraceEvent& event : request.events) {
         std::ostringstream out;
-        out << "trace event: trace_id = " << request.trace_id
-            << " stage = " << event.stage
-            << " tokens = " << event.tokens
-            << " elapsed_ms = " << FormatMs(event.elapsed_ms);
+        out << "trace event: trace_id=" << request.trace_id
+            << " stage=" << event.stage
+            << " tokens=" << event.tokens
+            << " elapsed_ms=" << FormatMs(event.elapsed_ms);
 
         if (!event.detail.empty()) {
-            out << " detail = \"" << event.detail << "\""; 
+            out << " detail=\"" << event.detail << "\""; 
         } 
         lines.push_back(out.str());
     }
