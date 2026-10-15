@@ -32,7 +32,7 @@ MiniBatch MiniBatch::FromTokens(const std::vector<int>& toks, int start_pos) {
 }
 
 
-Tensor ForwardBatch(MiniLlamaContext& ctx, const MiniLlamaModel* model, const MiniBatch& batch) {
+Tensor ForwardBatch(MiniLlamaContext& ctx, const MiniLlamaModel& model, const MiniBatch& batch) {
     if (batch.num_tokens() == 0) {
         throw std::runtime_error("ForwardBatch: empty batch");
     }
@@ -43,8 +43,10 @@ Tensor ForwardBatch(MiniLlamaContext& ctx, const MiniLlamaModel* model, const Mi
     Tensor logits;
     for (int i = 0; i < batch.num_tokens(); ++i) {
         ctx.pos = batch.positions[i];
+        logits = ForwardToken(ctx, model, batch.tokens[i]);
         ctx.token_history.push_back(batch.tokens[i]);
     }
+    return logits;
 }
 
 }
