@@ -6,6 +6,7 @@
 #include "mini_llama/kv_cache.h"
 #include "mini_llama/radix_tree.h" 
 #include "mini_llama/request_context.h"
+#include "mini_llama/sampler.h"
 
 
 // tensor
@@ -48,3 +49,10 @@ using mini_llama::RequestContext;
 using mini_llama::StartRequest;
 using mini_llama::FormatRequestTraceSummary;
 using mini_llama::FormatRequestTraceEvents;
+
+
+// sampler
+using mini_llama::MiniSampler;
+using mini_llama::SamplingParams;
+using mini_llama::SampleGreedy;
+

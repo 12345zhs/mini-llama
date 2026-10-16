@@ -19,6 +19,7 @@ set(MINI_LLAMA_CORE_SOURCES
     src/bpe_tokenizer.cc
     src/radix_tree.cc
     src/request_context.cc
+    src/sampler.cc
 )
 
 
@@ -31,6 +32,7 @@ set(TEST_SOURCES
     tests/test_tokenizer.cc
     tests/test_radix_tree.cc
     tests/test_request_context.cc
+    tests/test_sampler.cc
 )
 
 # 建立可执行文件
