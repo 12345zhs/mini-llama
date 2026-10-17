@@ -7,7 +7,9 @@
 #include "mini_llama/radix_tree.h" 
 #include "mini_llama/request_context.h"
 #include "mini_llama/sampler.h"
-
+#include "mini_llama/chat.h"
+#include "mini_llama/prompt_builder.h"
+#include "mini_llama/terminal.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -56,3 +58,14 @@ using mini_llama::MiniSampler;
 using mini_llama::SamplingParams;
 using mini_llama::SampleGreedy;
 
+
+// chat
+using mini_llama::ChatMessage;
+using mini_llama::ChatSession;
+
+// prompt_builder
+using mini_llama::PromptBuilder;
+using mini_llama::LoadChatTemplateFromGguf;
+
+// terminal
+using mini_llama::Terminal;
