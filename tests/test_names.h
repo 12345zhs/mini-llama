@@ -10,6 +10,7 @@
 #include "mini_llama/chat.h"
 #include "mini_llama/prompt_builder.h"
 #include "mini_llama/terminal.h"
+#include "mini_llama/gguf.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -69,3 +70,12 @@ using mini_llama::LoadChatTemplateFromGguf;
 
 // terminal
 using mini_llama::Terminal;
+
+//gguf
+using mini_llama::GgufReader;
+using mini_llama::GgufTensorInfo;
+using mini_llama::GgufMetadataKv;
+using mini_llama::GgmlTypename;
+using mini_llama::GgufValueTypeName;
+using mini_llama::GgmlType;
+using mini_llama::GgufValueType;

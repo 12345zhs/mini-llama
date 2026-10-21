@@ -23,6 +23,7 @@ set(MINI_LLAMA_CORE_SOURCES
     src/chat.cc
     src/prompt_builder.cc
     src/terminal.cc
+    src/gguf.cc
 )
 
 
@@ -37,6 +38,7 @@ set(TEST_SOURCES
     tests/test_request_context.cc
     tests/test_sampler.cc
     tests/test_chat.cc
+    tests/test_gguf.cc
 )
 
 # 建立可执行文件
