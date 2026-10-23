@@ -12,6 +12,9 @@
 #include "mini_llama/terminal.h"
 #include "mini_llama/gguf.h"
 #include "mini_llama/gguf_tokenizer.h"
+#include "mini_llama/debug.h"
+#include "mini_llama/loader.h"
+#include "mini_llama/model.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -85,3 +88,25 @@ using mini_llama::GgufValueType;
 // gguf_tokenizer
 using mini_llama::CreateGgufTokenizer;
 using mini_llama::GgufTokenizer;
+
+// debug
+using mini_llama::BenchmarkResult;
+using mini_llama::RunBenchmark;
+using mini_llama::DumpTensorShape;
+using mini_llama::DumpLogitsTopK;
+using mini_llama::DumpKvCacheInfo;
+
+
+// loader
+using mini_llama::TensorInfo;
+using mini_llama::TokenizerInfo;
+using mini_llama::ModelManifest;
+using mini_llama::ParseManifest;
+using mini_llama::LoadModel;
+using mini_llama::InspectModel;
+
+// model
+using mini_llama::RopeType;
+using mini_llama::ModelConfig;
+using mini_llama::LayerWeights;
+using mini_llama::MiniLlamaModel;

@@ -8,6 +8,7 @@
 #include "mini_llama/loader.h"
 #include "mini_llama/prompt_builder.h"
 #include "mini_llama/gguf.h"
+#include "mini_llama/debug.h"
 
 #include <iostream>
 #include <filesystem>
@@ -15,6 +16,7 @@
 #include <cstring>
 #include <fstream>
 #include <memory>
+#include <vector>
 
 namespace mini_llama {
 
@@ -27,7 +29,7 @@ struct LoadedModel {
 
 
 // 判断gguf文件是否正确
-static bool IsGgufFFile(const std::string& path) {
+static bool IsGgufFile(const std::string& path) {
     std::ifstream f(path, std::ios::binary);
     if (!f.is_open()) {
         return false;
@@ -44,7 +46,7 @@ static std::string FindGgufInDirectory(const std::string& path) {
 
     // 扫描文件夹里的所有内容,并保存所有.gguf文件
     for (const auto& entry : std::filesystem::directory_iterator(path, ec)) {
-        if (entry.is_regular_file() && entry.path().extension() == ",gguf") {
+        if (entry.is_regular_file() && entry.path().extension() == ".gguf") {
             candidates.push_back(entry);
         }
     }
@@ -75,7 +77,7 @@ static std::unique_ptr<ITokenizer> CreateTokenizerFromVocabHint(const std::strin
 static std::string ResolveManifestTokenizerPath(const std::string& config_path) {
     try {
         ModelManifest manifest = ParseManifest(config_path);
-        if (manifest.tokenizer.type != "vocab.json" || manifest.tokenizer.path.empty()) {
+        if (manifest.tokenizer.type != "vocab_json" || manifest.tokenizer.path.empty()) {
             return "";
         }
         std::filesystem::path tokenizer_path(manifest.tokenizer.path);
@@ -194,11 +196,59 @@ static LoadedModel LoadModelAndTokenizer(const std::string& path, const std::str
 }
 
 
+static void PrintRunUsage(const char* prog) {
+  std::cout
+      << "Usage: " << prog << " run <model-path|dir> [options]\n"
+      << "Options:\n"
+      << "  --temperature <T>  Sampling temperature (default: 0.0 = greedy)\n"
+      << "  --top-k <k>        Top-k sampling (default: 0 = disabled)\n"
+      << "  --seed <S>         Random seed (default: 0 = random)\n"
+      << "  -n, --n-predict <n> Maximum response tokens per turn (default: "
+         "64)\n"
+      << "  --tokenizer <path> Path to vocab.json tokenizer file\n"
+      << "  --backend cpu|cuda Execution backend (default: cpu; cuda requires "
+         "-DMINI_LLAMA_CUDA=ON)\n"
+      << "  --device <n>       CUDA device id for --backend cuda (default: 0)\n"
+      << "  -h, --help         Show this help\n";
+}
 
-static int RunChat(int argc, int** argv) {
+
+static int RunChat(int argc, char** argv) {
+
+    if (argc >= 3 && (std::strcmp(argv[2], "-h") == 0 || std::strcmp(argv[2], "--help") == 0)) {
+        PrintRunUsage(argv[0]);
+        return 0;
+    }
+
+    if (argc < 3) {
+        std::cerr << "Missing model directory.\n";
+        PrintRunUsage(argv[0]);
+        return 1;
+    }
+
+    std::string model_dir = argv[2];
+    float temperature = 0.0f;
+    int top_k = 0;
+    unsigned int seed = 0;
+    int max_response_tokens = 64;
+    std::string tokenizer_path;
 
 
-    LoadedModel  lm = ;
+
+    LoadedModel  lm = LoadModelAndTokenizer(model_dir, "", tokenizer_path);
+    if (!lm.model.loaded) {
+        std::cerr << "Failed to load model: " << lm.model.load_error << "\n";
+        return 1;
+    }
+    if (!lm.tokenizer) {
+        std::cerr << "Failed to load tokenizer.\n";
+        return 1;
+    }
+    if (lm.model.config.vocab_size < lm.tokenizer->vocab_size()) {
+        std::cerr << "Model vocab_size must be at least " << lm.tokenizer->vocab_size() << " for the tokenizer.\n";
+        return 1;
+    }
+
 
     MiniLlamaModel& model = lm.model;
     Terminal term;
@@ -263,6 +313,113 @@ static int RunInspectGguf(int argc, char** argv) {
 
     InspectGguf(reader);      // 打印解析信息
     return 0;
+}
+
+
+// benchmark的help指令
+static void PrintBenchUsage(const char* prog) {
+    std::cout
+      << "Usage: " << prog << " bench <model-path|dir> [options]\n"
+      << "Options:\n"
+      << "  -p, --prompt <str>    Input prompt text (default: \"hello\")\n"
+      << "  -n, --n-predict <n>   Number of tokens to generate (default: 64)\n"
+      << "  --seed <S>            Random seed (default: 0 = random)\n"
+      << "  --tokenizer <path>    Path to vocab.json tokenizer file\n"
+      << "  --quant q8_0|q4_0     Quantize loaded Linear weights before "
+         "benchmark\n"
+      << "  --threads <n>         Number of threads for parallel ops (0 = "
+         "auto)\n"
+      << "  --backend cpu|cuda    Execution backend (default: cpu; cuda "
+         "requires -DMINI_LLAMA_CUDA=ON)\n"
+      << "  --device <n>          CUDA device id for --backend cuda (default: "
+         "0)\n"
+      << "  --verbose             Print debug dumps after each step\n"
+      << "  -h, --help            Show this help\n"
+      << "\n"
+      << "CUDA benchmark metrics:\n"
+      << "  uploaded weights: CUDA-resident Linear weights loaded before "
+         "inference\n"
+      << "  cuda Linear/activation/attention calls: GPU kernel coverage during "
+         "forward\n"
+      << "  cpu attention fallback calls: attention steps that returned to "
+         "CPU\n"
+      << "  host->device / device->host copies: runtime transfer count and "
+         "bytes\n"
+      << "  cuda fallback: unsupported or missing quantized Linear weights "
+         "running on CPU\n";
+}
+
+
+
+static int RunBench(int argc, char** argv) {
+    if (argc >=3 && (std::strcmp(argv[2], "-h") == 0 || std::strcmp(argv[2], "--help") == 0)) {
+        PrintBenchUsage(argv[0]);
+        return 0;
+    }
+
+    if (argc < 3) {
+        std::cerr << "Missing model directory.\n";
+        PrintBenchUsage(argv[0]);
+        return 1;
+    }
+
+    // 接受指令
+    // --prompt  --n-predict  --quant --verbose
+    std::string model_dir = argv[2];   // 模型地址
+    std::string prompt = "hello";
+    int n_predict = 64;                   
+    unsigned int seed = 0;
+    std::string tokenizer_path;
+    bool verbose = false;
+    std::string quant_type;
+    int n_threads = 0;
+
+
+    // 加载模型并且设置分词器
+    LoadedModel lm = LoadModelAndTokenizer(model_dir, "", tokenizer_path);
+    // 校验正确性
+    if (!lm.model.loaded) {
+        std::cerr << "Failed to load model: " << lm.model.load_error << "\n";
+        return 1;
+    }
+    if (!lm.tokenizer) {
+        std::cerr << "Failed to load tokenizer.\n";
+        return 1;
+    }
+    if (lm.model.config.vocab_size < lm.tokenizer->vocab_size()) {
+        std::cerr << "Model vocab_size must be at least " << lm.tokenizer->vocab_size() << " for the tokenizer.\n";
+        return 1;
+    }
+
+
+    MiniLlamaModel baseline_model = lm.model;
+    MiniLlamaModel& model = lm.model;
+    std::unique_ptr<ITokenizer>& tokenizer = lm.tokenizer;
+    std::vector<int> tokens = tokenizer->Encode(prompt);
+
+    if (tokens.size() > static_cast<size_t>(model.config.max_seq_len)) {
+        std::cerr << "Prompt too long.\n";
+        return 1;
+    }
+    if (tokens.size() + static_cast<size_t>(n_predict) > static_cast<size_t>(model.config.max_seq_len)) {
+        n_predict = model.config.max_seq_len - tokens.size();
+    }
+
+
+    BenchmarkResult result = RunBenchmark(model, tokens, n_predict, seed, verbose);
+
+    std::cout << "Results:\n";
+    std::cout << "  prompt tokens:     " << result.n_prompt_tokens << "\n";
+    std::cout << "  generated tokens:  " << result.n_generated_tokens << "\n";
+    std::cout << "  Decode tokens:     " << result.n_decode_tokens << "\n";
+    std::cout << "  prefill time:      " << std::fixed << std::setprecision(2) << result.prefill_ms << " ms\n";
+    std::cout << "  Decode time:       " << std::fixed << std::setprecision(2) << result.decode_ms << " ms\n";
+    std::cout << "  total time:        " << std::fixed << std::setprecision(2) << (result.prefill_ms + result.decode_ms) << " ms\n";
+    std::cout << "  tokens/s (total):  " << std::fixed << std::setprecision(2) << result.tokens_per_sec() << "\n";
+    std::cout << "  tokens/s (Decode): " << std::fixed << std::setprecision(2) << result.decode_tokens_per_sec() << "\n";
+
+
+
 }
 
 }
