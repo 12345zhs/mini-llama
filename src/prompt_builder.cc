@@ -2,6 +2,7 @@
 #include "mini_llama/gguf.h"
 
 #include <stack>
+#include <cstring>
 
 
 namespace mini_llama {
@@ -494,7 +495,23 @@ std::string PromptBuilder::BuildQwen2(const std::vector<ChatMessage>& messages) 
 
 // 从gguf文件里读取chat template字符串
 std::string LoadChatTemplateFromGguf(const std::string& gguf_path) {
-    
+    std::string tmpl;
+    if (!GgufGetMetadataString(gguf_path, "tokenizer.chat_template", tmpl)) {
+        // gguf里没有模板，看架构名字
+        std::string architecture;
+        if (!GgufGetMetadataString(gguf_path, "general.architecture", architecture) && std::strcmp(architecture.c_str(), "qwen2") == 0) {
+            return "qwen2";
+        }
+        return "";
+    }
+
+    // gguf里有模板，看看是不是qwen2的特征
+    if (tmpl.find("{% for message in messages %}") != std::string::npos && tmpl.find("<|im_start|>") != std::string::npos && tmpl.find("<|im_end|>") != std::string::npos) {
+        return tmpl;
+    }
+
+    return "";
+
 }
 
 }

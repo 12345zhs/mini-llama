@@ -6,6 +6,8 @@
 #include "mini_llama/gguf_loader.h"
 #include "mini_llama/gguf_tokenizer.h"
 #include "mini_llama/loader.h"
+#include "mini_llama/prompt_builder.h"
+#include "mini_llama/gguf.h"
 
 #include <iostream>
 #include <filesystem>
@@ -16,6 +18,7 @@
 
 namespace mini_llama {
 
+// 加载的模型、tokenizer、chat
 struct LoadedModel {
     MiniLlamaModel model;
     std::unique_ptr<ITokenizer> tokenizer;
@@ -136,7 +139,7 @@ static LoadedModel LoadModelAndTokenizer(const std::string& path, const std::str
         }
 
         // chat模板
-        result.chat_template = ;
+        result.chat_template = LoadChatTemplateFromGguf(model_path);
     } else {
         // json+bin
         // 确认model.bin与model.json的路径
@@ -192,8 +195,6 @@ static LoadedModel LoadModelAndTokenizer(const std::string& path, const std::str
 
 
 
-
-
 static int RunChat(int argc, int** argv) {
 
 
@@ -245,6 +246,23 @@ static int RunChat(int argc, int** argv) {
             continue;
         }
     }
+}
+
+
+// 解析gguf文件信息
+static int RunInspectGguf(int argc, char** argv) {
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " inspect-gguf <path>\n";        // 必须给出文件路径
+        return 1;
+    }
+    GgufReader reader;
+    if (!reader.Load(argv[2])) {
+        std::cerr << "Failed to load GGUF: " << reader.load_error << "\n";
+        return 1;
+    }
+
+    InspectGguf(reader);      // 打印解析信息
+    return 0;
 }
 
 }

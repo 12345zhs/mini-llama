@@ -24,6 +24,7 @@ set(MINI_LLAMA_CORE_SOURCES
     src/prompt_builder.cc
     src/terminal.cc
     src/gguf.cc
+    src/gguf_tokenizer.cc
 )
 
 
@@ -39,6 +40,7 @@ set(TEST_SOURCES
     tests/test_sampler.cc
     tests/test_chat.cc
     tests/test_gguf.cc
+    tests/test_gguf_tokenizer.cc
 )
 
 # 建立可执行文件

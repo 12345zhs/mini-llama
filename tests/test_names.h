@@ -11,6 +11,7 @@
 #include "mini_llama/prompt_builder.h"
 #include "mini_llama/terminal.h"
 #include "mini_llama/gguf.h"
+#include "mini_llama/gguf_tokenizer.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -79,3 +80,8 @@ using mini_llama::GgmlTypename;
 using mini_llama::GgufValueTypeName;
 using mini_llama::GgmlType;
 using mini_llama::GgufValueType;
+
+
+// gguf_tokenizer
+using mini_llama::CreateGgufTokenizer;
+using mini_llama::GgufTokenizer;
