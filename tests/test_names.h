@@ -15,6 +15,8 @@
 #include "mini_llama/debug.h"
 #include "mini_llama/loader.h"
 #include "mini_llama/model.h"
+#include "mini_llama/quant.h"
+#include "mini_llama/quantized_tensor.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -110,3 +112,28 @@ using mini_llama::RopeType;
 using mini_llama::ModelConfig;
 using mini_llama::LayerWeights;
 using mini_llama::MiniLlamaModel;
+
+// quant
+using mini_llama::kQ80BlockSize;
+using mini_llama::kQ40BlockSize;
+using mini_llama::kQ41BlockSize;
+
+using mini_llama::BlockQ80;
+using mini_llama::BlockQ40;
+using mini_llama::BlockQ41;
+
+using mini_llama::QuantizeToQ80;
+using mini_llama::QuantizeToQ40;
+using mini_llama::DequantizeFromQ80;
+using mini_llama::DequantizeFromQ40;
+using mini_llama::DequantizeFromQ41;
+
+using mini_llama::LinearQ80;
+using mini_llama::LinearQ40;
+using mini_llama::LinearQ41;
+
+using mini_llama::MatmulQ80;
+using mini_llama::MatmulQ40;
+
+using mini_llama::CompareMatmulError;
+using mini_llama::CompareQ40Error;
