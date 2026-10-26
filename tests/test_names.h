@@ -17,6 +17,10 @@
 #include "mini_llama/model.h"
 #include "mini_llama/quant.h"
 #include "mini_llama/quantized_tensor.h"
+#include "mini_llama/thread_pool.h"
+#include "mini_llama/matmul_dispatch.h"
+#include "mini_llama/batch.h"
+#include "mini_llama/forward.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -137,3 +141,23 @@ using mini_llama::MatmulQ40;
 
 using mini_llama::CompareMatmulError;
 using mini_llama::CompareQ40Error;
+
+
+// matmul_dispatch
+using mini_llama::MatmulMode;
+using mini_llama::MatmulDispatch;
+using mini_llama::LinearDispatch;
+
+// thread_pool
+using mini_llama::ParallelFor;
+using mini_llama::GetThreadCount;
+using mini_llama::SetThreadCount;
+
+
+// batch
+using mini_llama::MiniBatch;
+using mini_llama::MiniLlamaContext;
+
+
+// forward
+
