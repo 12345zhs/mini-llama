@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mini_llama/tensor.h"
+#include "mini_llama/quantized_tensor.h"
 
 #include <memory>
 

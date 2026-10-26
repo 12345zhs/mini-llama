@@ -7,7 +7,7 @@ namespace mini_llama {
 
 // 获取默认模式
 MatmulMode DefaultMatmulMode() {
-    return MatmulMode::kThreadedSimd;
+    return MatmulMode::kThreaded;
 }
 
 
@@ -29,7 +29,11 @@ static Tensor MatmulNaive(const Tensor& a, const Tensor& b) {
 
 
 static Tensor MatmulThreaded(const Tensor&a, const Tensor& b) {
+    int m = a.shape[0];
+    int n = b.shape[1];
+    Tensor c({m, n}, 0.0f);
 
+    // 线程池
 }
 
 
@@ -52,7 +56,13 @@ static Tensor LinearNaive(const Tensor& x, const Tensor& weight) {
 
 
 static Tensor LinearThreaded(const Tensor& x, const Tensor& weight) {
+    int in_features = weight.shape[1];
+    int out_features = weight.shape[0];
+    bool is_1d = (weight.num_dims() == 1);
 
+    Tensor result(is_1d ? std::vector<int>({out_features}) : std::vector<int>({1, out_features}), 0.0f);
+
+    // 线程池
 }
 
 
@@ -71,10 +81,7 @@ Tensor MatmulDispatch(const Tensor& a, const Tensor& b, MatmulMode mode) {
         case MatmulMode::kNaive : 
             return MatmulNaive(a, b);
         case MatmulMode::kThreaded:  
-            return MatmulNaive(a, b);
-        case MatmulMode::kSimd : 
-        case MatmulMode::kThreadedSimd : 
-            return MatmulNaive(a, b);
+            return MatmulThreaded(a, b);
     }
     return MatmulNaive(a, b);
 }
@@ -101,11 +108,7 @@ Tensor LinearDispatch(const Tensor& x, const Tensor& weight, MatmulMode mode) {
         case MatmulMode::kNaive : 
             return LinearNaive(x, weight);
         case MatmulMode::kThreaded :
-            return LinearNaive(x, weight); 
-        case MatmulMode::kSimd :
-            return LinearNaive(x, weight);
-        case MatmulMode::kThreadedSimd :
-            return LinearNaive(x, weight);
+            return LinearThreaded(x, weight); 
     }
     return LinearNaive(x, weight);
 }

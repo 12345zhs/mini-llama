@@ -7,8 +7,6 @@ namespace mini_llama{
 enum class MatmulMode {
     kNaive,                      // 普通循环
     kThreaded,                   // 多CPU线程执行
-    kSimd,                       // CPU的SIMD指令集加速
-    kThreadedSimd,               // 多CPU线程+SIMD指令集加速
 };
 
 

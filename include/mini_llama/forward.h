@@ -3,6 +3,7 @@
 #include "mini_llama/context.h"
 #include "mini_llama/model.h"
 #include "mini_llama/batch.h"
+#include "mini_llama/quantized_tensor.h"
 
 namespace mini_llama {
 

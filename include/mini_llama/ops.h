@@ -2,6 +2,7 @@
 
 #include "mini_llama/tensor.h"
 #include "mini_llama/model.h"
+#include "mini_llama/quantized_tensor.h"
 
 namespace mini_llama {
 
@@ -10,6 +11,7 @@ Tensor Matmul(const Tensor& a, const Tensor& b);
 
 // 全连接层
 Tensor Linear(const Tensor& x, const Tensor& weight);
+Tensor Linear(const Tensor& x, const QuantizedTensor& weight);
 
 // RmsNorm归一化
 Tensor RmsNorm(const Tensor& x, const Tensor& weight, float eps);
