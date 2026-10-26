@@ -5,6 +5,7 @@
 #include "mini_llama/model.h"
 #include "mini_llama/ops.h"
 #include "mini_llama/kv_cache.h"
+#include "mini_llama/thread_pool.h"
 
 #include <stdexcept>
 #include <cstring>
@@ -211,7 +212,12 @@ static Tensor AttentionForward(const MiniLlamaModel& model, const Tensor& q, con
     // GPU
     
 
-    // cpu 并行执行
+    // cpu 并行执
+    ParallelFor(n_heads, [&](int begin, int end) {
+        for (int h = begin; h < end; ++h) {
+            compute_head(h);
+        }
+    });
 
 
     return attn_out;

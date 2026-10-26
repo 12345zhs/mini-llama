@@ -1,5 +1,6 @@
 #include "mini_llama/quant.h"
 #include "mini_llama/ops.h"
+#include "mini_llama/thread_pool.h"
 
 
 #include <algorithm>
@@ -10,7 +11,7 @@
 namespace mini_llama {
 
 // 将Fp32转化为Fp16
-uint16_t FloatToFp16(float value) {
+static uint16_t FloatToFp16(float value) {
     uint32_t bits = 0;
     std::memcpy(&bits, &value, sizeof(bits));
 
@@ -397,6 +398,27 @@ static Tensor LinearQuantizedImpl(const Tensor& x, const std::vector<BlockType>&
 
 
     // 多线程并行计算
+    ParallelFor(rows * out_features, [&](int begin, int end){
+        for (int flat_index = begin; flat_index < end; ++flat_index) {
+            int row = flat_index / out_features;            // 计算的行
+            int j = flat_index % out_features;              // 当前行的第几个输出特征 , weight的第几行
+            const float* x_row = x.data.data() + static_cast<size_t>(row) * in_features;  // 输入x的起始位置
+
+            float sum = 0.0f;
+            int block_base = j * n_blocks_per_row;                                          // 当前weight所属的那个block
+            // 边解压边计算
+            for (int b = 0; b < n_blocks_per_row; ++b) {
+                const BlockType& block = blocks[block_base + b];
+                int base_k = b * kBlockSize;
+                int k_end = std::min(base_k + kBlockSize, in_features);
+                for (int k = base_k; k < k_end; ++k) {
+                    float w = dequant_fn(block, k - base_k);
+                    sum += w * x_row[k];
+                }
+            }
+            result.data[static_cast<size_t>(row) * out_features + j] = sum;
+        }
+    });
 
 
     return result;

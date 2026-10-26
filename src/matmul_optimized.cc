@@ -1,5 +1,6 @@
 #include "mini_llama/matmul_dispatch.h"
 #include "mini_llama/tensor.h"
+#include "mini_llama/thread_pool.h"
 
 #include <stdexcept>
 
@@ -31,9 +32,23 @@ static Tensor MatmulNaive(const Tensor& a, const Tensor& b) {
 static Tensor MatmulThreaded(const Tensor&a, const Tensor& b) {
     int m = a.shape[0];
     int n = b.shape[1];
+    int inner_dim = a.shape[1];
     Tensor c({m, n}, 0.0f);
 
-    // 线程池
+    // 线程池,最外层的循环i交给多个线程执行
+    ParallelFor(m, [&](int begin, int end) {
+        for (int i = begin; i < end; ++i) {
+            for (int j = 0; j < n; ++j) {
+                float sum = 0.0f;
+                for (int k = 0; k < inner_dim; ++k) {
+                    sum += a.data[i * inner_dim + k] * b.data[k * n + j];
+                }
+                c.data[i * n + j] = sum;
+
+            }
+        }
+    });
+    return c;
 }
 
 
@@ -63,6 +78,16 @@ static Tensor LinearThreaded(const Tensor& x, const Tensor& weight) {
     Tensor result(is_1d ? std::vector<int>({out_features}) : std::vector<int>({1, out_features}), 0.0f);
 
     // 线程池
+    ParallelFor(out_features, [&](int begin, int end){
+        for (int j = begin; j < end; ++j) {
+            float sum = 0.0f;
+            for (int k = 0; k < in_features; ++k) {
+                sum += x[j] * weight[j * in_features + k];
+            }
+            result.data[j] = sum;
+        }
+    });
+    return result;
 }
 
 
