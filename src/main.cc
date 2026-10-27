@@ -9,6 +9,9 @@
 #include "mini_llama/prompt_builder.h"
 #include "mini_llama/gguf.h"
 #include "mini_llama/debug.h"
+#include "mini_llama/backend.h"
+#include "mini_llama/cuda_runtime.h"
+
 
 #include <iostream>
 #include <filesystem>
@@ -17,8 +20,62 @@
 #include <fstream>
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace mini_llama {
+
+// 从命令行中解析整形
+static bool ParseIntArg(const char* text, int& value) {
+    char* end = nullptr;
+    int64_t parsed = std::strtoll(text, &end, 10);   // end指向字符串里第一个不是数字的字符地址
+    // 一个数字都没着找见
+    if (end == text || *end != '\0') {
+        return false;
+    }
+    if (parsed < 0 || parsed > 1000000) {
+        return false;
+    }
+    value = static_cast<int>(parsed);
+    return true;
+}
+
+
+// 解析backend的参数，转化为BackendConfig内部的变量
+// --backend cpu | cuda
+static bool ParseBackendArg(const char* text, BackendConfig& config) {
+    BackendKind kind;
+    if (!ParseBackendKind(text, kind)) {
+        return false;
+    }
+    config.kind = kind;
+    return true;
+}
+
+
+// 解析 --device 0
+static bool ParseDeviceArg(const char* text, BackendConfig& config) {
+    int device_id = 0;
+    if (!ParseIntArg(text, device_id) || device_id < 0) {
+        return false;
+    }
+    config.device_id = device_id;
+    config.device_id_set = true;
+    return true;
+}
+
+// 验证后端的config,是否有矛盾的参数
+static bool ValidateBackendOrPrint(const BackendConfig& config) {
+    try {
+        ValidateBackend(config);
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Backend setup failed: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+
+
 
 // 加载的模型、tokenizer、chat
 struct LoadedModel {
@@ -419,7 +476,72 @@ static int RunBench(int argc, char** argv) {
     std::cout << "  tokens/s (Decode): " << std::fixed << std::setprecision(2) << result.decode_tokens_per_sec() << "\n";
 
 
-
 }
 
+// 命令
+static void PrintGlobalUsage(const char* prog) {
+    std::cout << "Usage: " << prog << " <command> [options]\n"
+              << "Commands:\n"
+              << "  generate      One-shot text generation (default)\n"
+              << "  run           Interactive chat mode\n"
+              << "  inspect       Inspect model metadata\n"
+              << "  inspect-gguf  Inspect GGUF file\n"
+              << "  bench         Benchmark inference performance\n"
+              << "  --cuda-info   Print CUDA device information for the selected "
+                 "CUDA build\n"
+              << "\n"
+              << "Run \"" << prog << " generate --help\", \"" << prog
+              << " run --help\", or \"" << prog
+              << " bench --help\" for details.\n";
+}
+
+
+//  --cuda-info 命令
+static int RunCudaInfo() {
+    try {
+        int count = CudaDeviceCount();
+        std::cout << "CUDA devices: " << count << std::endl;
+        for (int device_id = 0; device_id < count; ++device_id) {
+            CudaDeviceInfo info = CudaGetDeviceInfo(device_id);
+            std::cout << CudaFormatDeviceInfo(info) << std::endl;
+        }
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "CUDA info failed: " << e.what() << "\n";
+        return 1;
+    }
+}
+
+
+
+int main(int argc, char** argv) {
+    // 只有mini_llama一个参数，输出帮助文档
+    if (argc < 2) {
+        mini_llama::PrintGlobalUsage(argv[0]);
+        return 1;
+    }
+
+    std::string command = argv[1];
+    if (command == "generate") {
+
+    } else if (command == "run") {
+
+    } else if (command == "inspect") {
+        
+    } else if (command == "bench") {
+        
+    } else if (command == "inspect-gguf") {
+        
+    } else if (command == "--cuda-info") {
+        
+    } else if (command == "-h" || command == "--help") {
+        
+    } else if (!command.empty() && command[0] == '-') {
+        
+    } else  {
+        std::cerr << "Unknown command: " << command << std::endl;
+        mini_llama::PrintGlobalUsage(argv[0]);
+        return 1;
+    }
+}
 }

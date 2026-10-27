@@ -21,6 +21,7 @@
 #include "mini_llama/matmul_dispatch.h"
 #include "mini_llama/batch.h"
 #include "mini_llama/forward.h"
+#include "mini_llama/cuda_runtime.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -158,6 +159,10 @@ using mini_llama::SetThreadCount;
 using mini_llama::MiniBatch;
 using mini_llama::MiniLlamaContext;
 
-
-// forward
-
+// cuda_runtime
+using mini_llama::CudaRuntimeBuilt;
+using mini_llama::CudaDeviceCount;
+using mini_llama::CudaGetDeviceInfo;
+using mini_llama::CudaFormatDeviceInfo;
+using mini_llama::CudaDeviceBuffer;
+using mini_llama::CudaDeviceInfo;
