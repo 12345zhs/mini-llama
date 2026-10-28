@@ -22,6 +22,8 @@
 #include "mini_llama/batch.h"
 #include "mini_llama/forward.h"
 #include "mini_llama/cuda_runtime.h"
+#include "mini_llama/cuda_tensor.h"
+#include "mini_llama/cuda_matmul.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -166,3 +168,9 @@ using mini_llama::CudaGetDeviceInfo;
 using mini_llama::CudaFormatDeviceInfo;
 using mini_llama::CudaDeviceBuffer;
 using mini_llama::CudaDeviceInfo;
+
+
+// cuda_matmul
+using mini_llama::CudaMatmulBuilt;
+using mini_llama::CudaMatmul;
+using mini_llama::CudaLinear;
