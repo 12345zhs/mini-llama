@@ -202,7 +202,7 @@ void CudaDeviceBuffer::Reset() {
     if (data_ == nullptr) {
         return;
     }
-    cudaSetDevice(device_id_);
+    CudaSetDevice(device_id_);
     CudaFreeBytes(data_);
 
     data_ = nullptr;
@@ -219,7 +219,7 @@ void CudaDeviceBuffer::Reset(size_t bytes, int device_id) {
         return;
     }
 
-    cudaSetDevice(device_id);
+    CudaSetDevice(device_id);
     data_ = CudaMallocBytes(bytes);
     bytes_ = bytes;
     device_id_ = device_id; 
@@ -231,7 +231,7 @@ void CudaDeviceBuffer::Upload(const void* src, size_t bytes) {
     if (bytes > bytes_) {
         throw std::runtime_error("CUDA upload exceeds device buffer size");
     }
-    cudaSetDevice(device_id_);
+    CudaSetDevice(device_id_);
     CudaMmecpyBytes(data_, src, bytes, CudaMemcpyKind::kHostToDevice);
 
 }
