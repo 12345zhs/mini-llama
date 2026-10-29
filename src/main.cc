@@ -21,6 +21,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <iomanip>
 
 namespace mini_llama {
 
@@ -75,6 +76,137 @@ static bool ValidateBackendOrPrint(const BackendConfig& config) {
 }
 
 
+// 输出多少MB
+static std::string FormatMb(size_t bytes) {
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(2) << (static_cast<double>(bytes) / (1024.0 * 1024.0)) << "MB";
+    return out.str();
+}
+
+
+// 是否可以上传cuda权重
+static bool PrepareCudaWeightsOrPrint(MiniLlamaModel& model, const BackendConfig& config) {
+    if (config.kind != BackendKind::kCuda) {
+        return true;
+    }
+    try {
+        UploadModelWeightsToCuda(model, config.device_id);
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "CUDA weight upload failed: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+
+
+// 上传了多少权重，占了多少显存
+static void PrintCudaWeightSummary(const MiniLlamaModel& model, const std::string& indent = "") {
+    std::cout << indent << "uploaded weights: " << ModelCudaUploadedWeightCount(model) << std::endl;
+    std::cout << indent <<  "gpu memory used: " << ModelCudaMemoryBytes(model) << " bytes (" << FormatMb(ModelCudaMemoryBytes(model)) << ")" << std::endl;
+}
+
+
+// 统计Linear的量化权重 
+struct LinearWeightTypeCounts {
+    size_t f32 = 0;
+    size_t q8_0 = 0;
+    size_t q4_0 = 0;
+    size_t q4_1 = 0;
+
+    size_t total() const {
+        return f32 + q8_0 + q4_0 + q4_1;
+    }
+    size_t quantized() const {
+        return q8_0 + q4_0 + q4_1;
+    }
+};
+
+
+// LinearWeightTypeCounts的量化类型数量
+static void CountLinearWeight(const QuantizedTensor& tensor, LinearWeightTypeCounts& counts) {
+    switch (tensor.type) {
+        case QuantType::kF32 : {
+            counts.f32 += 1;
+            return;
+        }
+        case QuantType::kQ80 : {
+            counts.q8_0 += 1;
+            return;
+        }
+        case QuantType::kQ40 : {
+            counts.q4_0 += 1;
+            return;
+        }
+        case QuantType::kQ41 : {
+            counts.q4_1 += 1;
+            return;
+        }
+    }
+}
+
+
+// 遍历linear里面的量化权重，每种类型有多少个
+static LinearWeightTypeCounts ModelLinearWeightTypeCounts(const MiniLlamaModel& model) {
+    LinearWeightTypeCounts counts;
+    CountLinearWeight(model.lm_head, counts);
+    for (const auto& lw : model.layers) {
+        CountLinearWeight(lw.wq, counts);
+        CountLinearWeight(lw.wk, counts);
+        CountLinearWeight(lw.wv, counts);
+        CountLinearWeight(lw.wo, counts);
+        CountLinearWeight(lw.w_gate, counts);
+        CountLinearWeight(lw.w_up, counts);
+        CountLinearWeight(lw.w_dowm, counts);
+    }
+    return counts;
+}
+
+
+// 有多少个linear权重传给cuda，有多少个回退到cpu
+static void PrintCudaExecutionSummary(const MiniLlamaModel& model, const std::string& indent = "") {
+    PrintCudaWeightSummary(model, indent);
+    LinearWeightTypeCounts counts = ModelLinearWeightTypeCounts(model);
+    // 实际加载了多少量化权重
+    size_t uploaded_f32 = ModelCudaUploadedF32WeightCount(model);
+    size_t uploaded_q8_0 = ModelCudaUploadedQ80WeightCount(model);
+    size_t uploaded_q4_0 = ModelCudaUploadedQ40WeightCount(model);
+    size_t uploaded_q4_1 = ModelCudaUploadedQ41WeightCount(model);
+
+    std::cout << indent << "cuda f32 Linear weights: " << uploaded_f32 << "/" << counts.total() << "\n";
+    if (counts.q8_0 > 0) {
+        std::cout << indent << "cuda q8_0 Linear weights: " << uploaded_q8_0 << "/" << counts.q8_0 << "\n";
+    }
+    if (counts.q4_0 > 0) {
+        std::cout << indent << "cuda q4_0 Linear weights: " << uploaded_q4_0 << "/" << counts.q4_0 << "\n";
+    }
+    if (counts.q4_1 > 0) {
+        std::cout << indent << "cuda q4_1 Linear weights: " << uploaded_q4_1 << "/" << counts.q4_1 << "\n";
+    }
+
+    size_t q8_0_fallback = counts.q8_0 >= uploaded_q8_0 ? counts.q8_0 - uploaded_q8_0 : 0;
+    size_t q4_0_fallback = counts.q4_0 >= uploaded_q4_0 ? counts.q4_0 - uploaded_q4_0 : 0;
+    size_t q4_1_fallback = counts.q4_1 >= uploaded_q4_1 ? counts.q4_1 - uploaded_q4_1 : 0;
+
+
+    if (q8_0_fallback + q4_0_fallback + q4_1_fallback > 0) {
+        std::cout << indent << "cuda fallback: unsupported or missing quantized Linear " "weights use CPU path" << " (Q8_0=" << q8_0_fallback << ", Q4_0=" << q4_0_fallback << ", Q4_1=" << q4_1_fallback << ")\n";
+    }
+}
+
+
+
+// 打印cudaRuntime的情况
+static void PrintCudaRuntimeSummary(const MiniLlamaModel& model, const std::string& indent = "") {
+    std::cout << indent << "cuda Linear calls: " << ModelCudaLinearCalls(model) << "\n";
+    std::cout << indent << "cuda activation calls: " << ModelCudaActivationCalls(model) << "\n";
+    std::cout << indent << "cuda attention calls: " << ModelCudaAttentionCalls(model) << "\n";
+    std::cout << indent << "cpu attention fallback calls: " << ModelCudaAttentionCpuFallbacks(model) << "\n";
+    std::cout << indent << "cuda kv write bytes: " << ModelCudaKvCacheWriteBytes(model) << "\n";
+    std::cout << indent << "cuda kv read bytes: " << ModelCudaKvCacheReadBytes(model) << "\n";
+    std::cout << indent << "host->device copies: " << ModelCudaHostToDeviceCopies(model) << " (" << ModelCudaHostToDeviceBytes(model) << " bytes)\n";
+    std::cout << indent << "device->host copies: " << ModelCudaDeviceToHostCopies(model) << " (" << ModelCudaDeviceToHostBytes(model) << " bytes)\n";
+}
 
 
 // 加载的模型、tokenizer、chat
@@ -171,7 +303,7 @@ static LoadedModel LoadModelAndTokenizer(const std::string& path, const std::str
     }
 
     // 检查gguf是否可用
-    bool is_gguf = IsGgufFFile(model_path);
+    bool is_gguf = IsGgufFile(model_path);
     if (is_gguf) {
         result.model = LoadGgufModel(model_path);  // 加载权重
         if (!result.model.loaded) {

@@ -119,6 +119,12 @@ using mini_llama::RopeType;
 using mini_llama::ModelConfig;
 using mini_llama::LayerWeights;
 using mini_llama::MiniLlamaModel;
+using mini_llama::ModelHasCudaWeights;
+using mini_llama::ModelCudaUploadedWeightCount;
+using mini_llama::ModelCudaMemoryBytes;
+using mini_llama::ClearModelCudaWeights;
+using mini_llama::UploadModelWeightsToCuda;
+
 
 // quant
 using mini_llama::kQ80BlockSize;
@@ -144,6 +150,9 @@ using mini_llama::MatmulQ40;
 
 using mini_llama::CompareMatmulError;
 using mini_llama::CompareQ40Error;
+
+using mini_llama::QuantizedTensor;
+using mini_llama::QuantType;
 
 
 // matmul_dispatch

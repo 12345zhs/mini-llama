@@ -329,7 +329,7 @@ Tensor CudaLinearrDeviceWeight(const Tensor& x, const void* w_device, const std:
 
 
 // linear 不涉及数据搬运
-Tensor CudaLinearrDeviceInput(const CudaTensor& x, const void* w_device, const std::vector<int>& w_shape, int device_id) {
+CudaTensor CudaLinearrDeviceInput(const CudaTensor& x, const void* w_device, const std::vector<int>& w_shape, int device_id) {
 #ifdef MINI_LLAMA_USE_CUDA
     return CudaLinearDeviceInputWithDevicePointer(x, w_device, w_shape, device_id);
 #else

@@ -47,6 +47,7 @@ set(MINI_LLAMA_CORE_SOURCES
     src/backend.cc
     src/cuda_matmul.cc
     src/cuda_tensor.cc
+    src/model.cc
 )
 
 
@@ -83,6 +84,7 @@ set(TEST_SOURCES
     tests/test_cuda_matmul.cc
     tests/test_cuda_forward_buffer.cc
     tests/test_cuda_forward_linear.cc
+    tests/test_loader.cc
 )
 
 # 建立可执行文件
