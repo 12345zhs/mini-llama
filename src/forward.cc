@@ -7,6 +7,7 @@
 #include "mini_llama/kv_cache.h"
 #include "mini_llama/thread_pool.h"
 #include "mini_llama/cuda_matmul.h"
+#include "mini_llama/cuda_quant.h"
 
 #include <stdexcept>
 #include <cstring>
@@ -234,12 +235,15 @@ static Tensor ForwardLinear(const MiniLlamaModel& model, const std::string& name
             break;
         }
         case QuantType::kQ40 : {
+            y = CudaQ40LinearDeviceWeight(x, cuda_weight->buffer.data(), cuda_weight->block_count, cuda_weight->shape, nullptr, model.cuda_weights->device_id);
             break;
         }
         case QuantType::kQ41 : {
+            y = CudaQ41LinearDeviceWeight(x, cuda_weight->buffer.data(), cuda_weight->block_count, cuda_weight->shape, nullptr, model.cuda_weights->device_id);
             break;
         }
         case QuantType::kQ80 : {
+            y = CudaQ80LinearDeviceWeight(x, cuda_weight->buffer.data(), cuda_weight->block_count, cuda_weight->shape, nullptr, model.cuda_weights->device_id);
             break;
         }
         break;
@@ -267,12 +271,15 @@ static CudaTensor ForwardLinearDevice(const MiniLlamaModel& model, const std::st
             break;
         }
         case QuantType::kQ80 : {
+            y = CudaQ80LinearDeviceInput(x, cuda_weight->buffer.data(), cuda_weight->block_count, cuda_weight->shape, CudaDeviceId(model));
             break;
         }
         case QuantType::kQ40 : {
+            y = CudaQ40LinearDeviceInput(x, cuda_weight->buffer.data(), cuda_weight->block_count, cuda_weight->shape, CudaDeviceId(model));
             break;
         }
         case QuantType::kQ41 : {
+            y = CudaQ41LinearDeviceInput(x, cuda_weight->buffer.data(), cuda_weight->block_count, cuda_weight->shape, CudaDeviceId(model));
             break;
         }
     }

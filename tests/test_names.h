@@ -24,6 +24,7 @@
 #include "mini_llama/cuda_runtime.h"
 #include "mini_llama/cuda_tensor.h"
 #include "mini_llama/cuda_matmul.h"
+#include "mini_llama/cuda_quant.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -124,6 +125,8 @@ using mini_llama::ModelCudaUploadedWeightCount;
 using mini_llama::ModelCudaMemoryBytes;
 using mini_llama::ClearModelCudaWeights;
 using mini_llama::UploadModelWeightsToCuda;
+using mini_llama::QuantizeModelToQ80;
+using mini_llama::QuantizeModelToQ40;
 
 
 // quant
@@ -183,3 +186,28 @@ using mini_llama::CudaDeviceInfo;
 using mini_llama::CudaMatmulBuilt;
 using mini_llama::CudaMatmul;
 using mini_llama::CudaLinear;
+
+
+// cuda_tensor
+using mini_llama::CudaTensor;
+using mini_llama::CudaTensorFromHost;
+
+
+
+// cuda_quant
+using mini_llama::CudaQuantBuilt;
+using mini_llama::CudaQ80Linear;
+using mini_llama::CudaQ80LinearDeviceWeight;
+using mini_llama::CudaQ80LinearDeviceInput;
+
+using mini_llama::CudaQ40Linear;
+using mini_llama::CudaQ40LinearDeviceWeight;
+using mini_llama::CudaQ40LinearDeviceInput;
+
+using mini_llama::CudaQ41Linear;
+using mini_llama::CudaQ41LinearDeviceWeight;
+using mini_llama::CudaQ41LinearDeviceInput;
+
+// quantized_tensor
+using mini_llama::ToTensor;
+

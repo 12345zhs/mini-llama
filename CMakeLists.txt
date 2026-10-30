@@ -48,12 +48,13 @@ set(MINI_LLAMA_CORE_SOURCES
     src/cuda_matmul.cc
     src/cuda_tensor.cc
     src/model.cc
+    src/cuda_quant.cc
 )
 
 
 if(MINI_LLAMA_CUDA)
     list(APPEND MINI_LLAMA_CORE_SOURCES 
-        
+        src/cuda_quant.cu
     )
 endif()
 
@@ -85,6 +86,7 @@ set(TEST_SOURCES
     tests/test_cuda_forward_buffer.cc
     tests/test_cuda_forward_linear.cc
     tests/test_loader.cc
+    tests/test_cuda_quant.cc
 )
 
 # 建立可执行文件
