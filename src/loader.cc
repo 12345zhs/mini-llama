@@ -460,13 +460,13 @@ static size_t CheckedTensorByteSize(const TensorInfo& info) {
         }
 
         const size_t d = static_cast<size_t>(dim);
-        if (num_elements * d > std::numeric_limits<size_t>::max()) {
+        if (num_elements > std::numeric_limits<size_t>::max() / d) {
             throw std::runtime_error("tensor size overflow for " + info.name);
         }
         num_elements *= d;
     }
 
-    if (num_elements * sizeof(float) > std::numeric_limits<size_t>::max()) {
+    if (num_elements > std::numeric_limits<size_t>::max() / sizeof(float)) {
         throw std::runtime_error("tensor byte size overflow for " + info.name);
     }
 
@@ -540,7 +540,7 @@ static void ValidateManifest(const ModelManifest& manifest) {
         }
 
         // 内存偏移量是否溢出校验
-        if (info.offset + info.byte_size > std::numeric_limits<size_t>::max()) {
+        if (info.offset > std::numeric_limits<size_t>::max() - info.byte_size) {
             throw std::runtime_error("tensor offset overflow for " + info.name);
         }
 

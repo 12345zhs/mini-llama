@@ -93,7 +93,7 @@ static size_t CheckedNumel(const std::vector<int>& shape, const char* caller) {
         }
 
         size_t dim_size = static_cast<size_t>(dim);
-        if (dim_size * total > std::numeric_limits<size_t>::max()) {
+        if (dim_size > std::numeric_limits<size_t>::max() / total) {
             throw std::runtime_error(std::string(caller) + ": shape element count overflow");
         }
         total *= dim_size;
