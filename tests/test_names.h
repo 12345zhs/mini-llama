@@ -25,6 +25,7 @@
 #include "mini_llama/cuda_tensor.h"
 #include "mini_llama/cuda_matmul.h"
 #include "mini_llama/cuda_quant.h"
+#include "mini_llama/cuda_ops.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -211,3 +212,18 @@ using mini_llama::CudaQ41LinearDeviceInput;
 // quantized_tensor
 using mini_llama::ToTensor;
 
+// cuda_ops
+using mini_llama::CudaOpsBuilt;
+using mini_llama::CudaRmsNorm;
+using mini_llama::CudaRmsNormDeviceWeight;
+using mini_llama::CudaSilu;
+using mini_llama::CudaSiluDeviceInput; 
+using mini_llama::CudaElementwiseAdd;
+using mini_llama::CudaElementwiseAddDeviceWeight;
+using mini_llama::CudaElementwiseAddDeviceInput;
+using mini_llama::CudaElementwiseMul;
+using mini_llama::CudaElementwiseMulDeviceInput;
+using mini_llama::CudaSoftmax;
+using mini_llama::CudaRope;
+using mini_llama::CudaRopeDeviceInput;
+using mini_llama::CudaEmbeddingLookupDeviceWeight;

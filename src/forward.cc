@@ -8,6 +8,7 @@
 #include "mini_llama/thread_pool.h"
 #include "mini_llama/cuda_matmul.h"
 #include "mini_llama/cuda_quant.h"
+#include "mini_llama/cuda_ops.h"
 
 #include <stdexcept>
 #include <cstring>
@@ -66,6 +67,25 @@ static Tensor AddOptionalBias(const Tensor& x, const Tensor& bias, const char* c
     for (int i = 0; i < bias.num_elements(); ++i) {
         y.data[i] += bias.data[i];
     }
+    return y;
+}
+
+
+// Gpu上可选的偏置加法函数，有bias就加上，没有就返回
+static CudaTensor AddOptionalBiasDevice(const MiniLlamaModel& model, const std::string& name, CudaTensor x, const Tensor& bias) {
+    if (bias.data.empty()) {
+        return x;
+    }
+    const CudaUploadedWeight* cuda_weight = FindCudaWeight(model, name, QuantType::kF32);
+    if (cuda_weight == nullptr || cuda_weight->linear) {
+        throw std::runtime_error("CUDA forward bias missing uploaded weight: " + name);
+    }
+    if (cuda_weight->shape != bias.shape) {
+        throw std::runtime_error("CUDA forward bias uploaded weight shape mismatch: " + name);
+    }
+
+    CudaTensor y = CudaElementwiseAddDeviceWeight(x, cuda_weight->buffer.data(), cuda_weight->shape, CudaDeviceId(model));
+    RecordCudaActivationCall(model);
     return y;
 }
 
@@ -287,6 +307,7 @@ static CudaTensor ForwardLinearDevice(const MiniLlamaModel& model, const std::st
     return y;
 }
 
+
 // Q\K\V投影矩阵 + bias
 static void ForwardQkvProjection(const MiniLlamaModel& model, const std::string& layer_prefix, const Tensor& h, const LayerWeights& lw, Tensor& q_flat, Tensor& k_flat, Tensor& v_flat) {
     const std::string q_name = layer_prefix + "wq";
@@ -315,6 +336,18 @@ static void ForwardQkvProjection(const MiniLlamaModel& model, const std::string&
 
 
 
+//Gpu上的 Q\K\V投影矩阵 + bias
+static void ForwardQkvProjectionDevice(const MiniLlamaModel& model, const std::string& layer_prefix, const CudaTensor& h, const LayerWeights& lw, CudaTensor& q, CudaTensor& k, CudaTensor& v) {
+    q = ForwardLinearDevice(model, layer_prefix + "wq", h, lw.wq);
+    k = ForwardLinearDevice(model, layer_prefix + "wk", h, lw.wk);
+    v = ForwardLinearDevice(model, layer_prefix + "wv", h, lw.wv);
+    q = AddOptionalBiasDevice(model, layer_prefix + "bq", std::move(q), lw.bq);
+    k = AddOptionalBiasDevice(model, layer_prefix + "bk", std::move(k), lw.bk);
+    v = AddOptionalBiasDevice(model, layer_prefix + "bv", std::move(v), lw.bv);
+}
+
+
+
 // token嵌入查表
 static Tensor EmbedToken(const MiniLlamaModel& model, int token_id) {
     int dim = model.config.dim;
@@ -328,6 +361,21 @@ static Tensor EmbedToken(const MiniLlamaModel& model, int token_id) {
     return x;
 }
 
+// Gpu上的embedding
+static CudaTensor EmbedTokenDevice(const MiniLlamaModel& model, int token_id) {
+    const CudaUploadedWeight* cuda_weight = FindCudaWeight(model, "token_embedding", QuantType::kF32);
+    if (cuda_weight == nullptr || cuda_weight->linear) {
+        throw std::runtime_error("CUDA forward embedding missing uploaded weight: token_embedding");
+    }
+
+    if (cuda_weight->shape != model.token_embedding.shape) {
+        throw std::runtime_error("CUDA forward embedding uploaded weight shape mismatch");
+    }
+
+    return CudaEmbeddingLookupDeviceWeight(cuda_weight->buffer.data(), cuda_weight->shape, token_id, CudaDeviceId(model));
+
+}
+
 
 // RmsNorm
 static Tensor ForwardRmsNorm(const MiniLlamaModel& model, const Tensor& x, const Tensor& weight, float eps) {
@@ -336,8 +384,27 @@ static Tensor ForwardRmsNorm(const MiniLlamaModel& model, const Tensor& x, const
     }
 
     // cuda权重，GPU实现
+    Tensor y = CudaRmsNorm(x, weight, eps, CudaDeviceId(model));
+    RecordCudaActivationCall(model);
+    return y;
 }
 
+
+
+// Gpu上的RmsNorm
+static CudaTensor ForwardRmsNormDevice(const MiniLlamaModel& model, const std::string& name, const CudaTensor& x, const Tensor& weight, float eps) {
+    const CudaUploadedWeight* cuda_weight = FindCudaWeight(model, name, QuantType::kF32);
+    if (cuda_weight == nullptr || cuda_weight->linear) {
+        throw std::runtime_error("CUDA forward RMSNorm missing uploaded weight: " + name);
+    }
+    if (cuda_weight->shape != weight.shape) {
+        throw std::runtime_error("CUDA forward RMSNorm uploaded weight shape mismatch: " + name);
+    }
+
+    CudaTensor y = CudaRmsNormDeviceWeight(x, cuda_weight->buffer.data(), cuda_weight->shape, eps, CudaDeviceId(model));
+    RecordCudaActivationCall(model);
+    return y;
+}
 
 
 // Rope
@@ -349,7 +416,17 @@ static void ForwardRope(const MiniLlamaModel& model, Tensor& q, Tensor& k, int p
     }
 
     //gpu
+    CudaRope(q, k, pos, theta, rope_type, CudaDeviceId(model));
+    RecordCudaActivationCall(model);
 }
+
+
+// GPU上的Rope
+static void ForwardRopeDevice(const MiniLlamaModel& model, CudaTensor& q, CudaTensor& k, int n_heads, int n_kv_heads, int head_dim, int pos, float theta, RopeType rope_type) {
+    CudaRopeDeviceInput(q, k, n_heads, n_kv_heads, head_dim, pos, theta, rope_type, CudaDeviceId(model));
+    RecordCudaActivationCall(model);
+}
+
 
 // GQA映射
 static int MapQHeadToKvHead(int q_head, int n_heads, int n_kv_heads) {
@@ -364,7 +441,10 @@ static Tensor ForwardSoftmax(const MiniLlamaModel& model, const Tensor& x) {
         return Softmax(x);
     }
     // GPU
+    Tensor y = CudaSoftmax(x, CudaDeviceId(model));
 
+    RecordCudaActivationCall(y);
+    return y;
 }
 
 
@@ -453,8 +533,18 @@ static Tensor ForwardAdd(const MiniLlamaModel& model, const Tensor& a, const Ten
     }
 
     // GPU
-
+    Tensor y = CudaElementwiseAdd(a, b, CudaDeviceId(model));
+    RecordCudaActivationCall(model);
+    return y;
 }
+
+// Gpu上的残差相加
+static CudaTensor ForwardAddDevice(const MiniLlamaModel& model, const CudaTensor& a, const CudaTensor& b) {
+    CudaTensor y = CudaElementwiseAddDeviceInput(a, b, CudaDeviceId(model));
+    RecordCudaActivationCall(model);
+    return y;
+}
+
 
 // SwiGlu
 static Tensor ForwardSwiGlu(const MiniLlamaModel& model, const Tensor& gate, const Tensor& up) {
@@ -463,6 +553,10 @@ static Tensor ForwardSwiGlu(const MiniLlamaModel& model, const Tensor& gate, con
         return SwiGlu(gate, up);
     }
     // gpu
+    Tensor silu_gate = CudaSilu(gate, CudaDeviceId(model));
+    Tensor y = CudaElementwiseMul(silu_gate, up, CudaDeviceId(model));
+    RecordCudaActivationCall(model);
+    return y;
 }
 
 // FFN
@@ -472,17 +566,40 @@ static Tensor FfnForward(const MiniLlamaModel& model, const std::string& layer_p
     const std::string down_name = layer_prefix + "w_down";
 
     // GPU
+    if (CudaLinearReady(model, gate_name, lw.w_gate) && CudaLinearReady(model, up_name, lw.w_up) &&  CudaLinearReady(model, down_name, lw.w_dowm)) {
+        CudaTensor h_dev = UploadCudaTensor(model, h);
+        CudaTensor gate_dev = ForwardLinearDevice(model, gate_name, h_dev, lw.w_gate);
+        CudaTensor up_dev = ForwardLinearDevice(model, up_name, h_dev, lw.w_up);
+        CudaTensor silu_gate_dev = CudaSiluDeviceInput(gate_dev, CudaDeviceId(model));
+        CudaTensor ff_dev = CudaElementwiseMulDeviceInput(silu_gate_dev, up_dev, CudaDeviceId(model));
 
+        RecordCudaActivationCall(model, 2);
+        CudaTensor out_dev = ForwardLinearDevice(model, down_name, ff_dev, lw.w_dowm);
+        return DownloadCudaTensor(model, out_dev);
+    }
 
     // cpu
     Tensor gate = ForwardLinear(model, gate_name, h, lw.w_gate);       // gate = w_gate(h)          // [dim] → [hidden_dim]
     Tensor up  = ForwardLinear(model, up_name, h, lw.w_up);            // up   = w_up(h)            // [dim] → [hidden_dim]
     
     Tensor act = ForwardSwiGlu(model, gate, up);                       // act  = SiLU(gate) * up    // [hidden_dim]
-    Tensor ff = ForwardLinear(model, down_name, lw.w_down);            // ff   = w_down(act)        // [hidden_dim] → [dim]
+    Tensor ff = ForwardLinear(model, down_name, lw.w_dowm);            // ff   = w_down(act)        // [hidden_dim] → [dim]
     
     return ff;
 }
+
+
+// Gpu的FFn
+static CudaTensor FfnForwardDevice(const MiniLlamaModel& model, const std::string& layer_prefix, const CudaTensor& h, const LayerWeights& lw) {
+    CudaTensor gate = ForwardLinearDevice(model, layer_prefix + "w_gate", h, lw.w_gate);
+    CudaTensor up = ForwardLinearDevice(model, layer_prefix + "w_up", h, lw.w_up);
+    CudaTensor silu_gate = CudaSiluDeviceInput(gate, CudaDeviceId(model));
+    CudaTensor ff = CudaElementwiseMulDeviceInput(silu_gate, up, CudaDeviceId(model));
+    RecordCudaActivationCall(model, 2);
+    CudaTensor out_dev = ForwardLinearDevice(model, layer_prefix + "w_down", ff, lw.w_dowm);
+    return out_dev;
+}
+
 
 // transform层级计算
 static Tensor ForwardLayer(MiniLlamaContext& ctx, const MiniLlamaModel& model, const Tensor& x, int layer, const LayerWeights& lw, const ModelConfig& c) {
@@ -506,7 +623,7 @@ static Tensor ForwardLayer(MiniLlamaContext& ctx, const MiniLlamaModel& model, c
     // 形状转化
     Tensor q = q_flat.ReshapeChecked({n_heads, head_dim}, "forward_layer q");
     Tensor k = k_flat.ReshapeChecked({n_kv_heads, head_dim}, "forward_layer k");
-    Tensor v = v_flat.ReshapeChecked({n_kv_heads, head_dim}, "forward_layer v");
+    Tensorv = v_flat.ReshapeChecked({n_kv_heads, head_dim}, "forward_layer v");
 
 
     // 旋转位置编码
