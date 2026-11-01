@@ -9,6 +9,7 @@
 #include "mini_llama/cuda_matmul.h"
 #include "mini_llama/cuda_quant.h"
 #include "mini_llama/cuda_ops.h"
+#include "mini_llama/cuda_kv_cache.h"
 
 #include <stdexcept>
 #include <cstring>
@@ -450,17 +451,26 @@ static Tensor ForwardSoftmax(const MiniLlamaModel& model, const Tensor& x) {
 
 // Attention计算
 static Tensor AttentionForward(const MiniLlamaModel& model, const Tensor& q, const Tensor& k, const Tensor& v, int pos, 
-                               int layer, KvCache& kv_cache, CudaKvCache& cuda_kv_cache, int n_heads, int n_kv_heads, int head_dim) {
+                               int layer, KvCache& kv_cache, CudaKvCache* cuda_kv_cache, int n_heads, int n_kv_heads, int head_dim) {
 
     kv_cache.Write(layer, pos, k, v);
     // 如果有CudaKvCache,并调用cuda attention计算
-    if () {
+    if (cuda_kv_cache != nullptr && cuda_kv_cache->empty()) {
+        cuda_kv_cache->Write(layer, pos, k, v);
+        RecordCudaKvCacheWrite(model, cuda_kv_cache->bytes());
 
+        Tensor attn_out = ;
+
+        RecordCudaAttentionCall(model);
+        RecordCudaKvCacheRead(model, static_cast<size_t>(pos + 1) * static_cast<size_t>(n_heads) * static_cast<size_t>(head_dim) * sizeof(float) * 2);
+        RecordCudaHostToDeviceCopy(model, q.size() * sizeof(float));
+        RecordCudaDeviceToHostCopy(model, attn_out.size() * sizeof(float));
+        return attn_out;
     }
 
     // 有cuda_weight
-    if () {
-
+    if (model.cuda_weights) {
+        RecordCudaAttentionCpuFallback(model);
     }
 
     // CPU注意力计算
@@ -505,6 +515,12 @@ static Tensor AttentionForward(const MiniLlamaModel& model, const Tensor& q, con
     };
 
     // GPU
+    if (model.cuda_weights) {
+        for (int h = 0; h < n_heads; ++h) {
+            compute_head(h);
+        }
+        return attn_out;
+    }
     
 
     // cpu 并行执
@@ -517,6 +533,25 @@ static Tensor AttentionForward(const MiniLlamaModel& model, const Tensor& q, con
 
     return attn_out;
 }
+
+
+
+// Attention计算
+static CudaTensor AttentionForwardDevice(const MiniLlamaModel& model, const CudaTensor& q, const CudaTensor& k, const CudaTensor& v, int pos, 
+                               int layer, CudaKvCache& cuda_kv_cache, int n_heads, int n_kv_heads, int head_dim) {
+
+    cuda_kv_cache.WriteDevice(layer, pos, k, v);
+    RecordCudaKvCacheWrite(model, cuda_kv_cache.bytes());
+
+    CudaTensor attn_out = ;
+
+    RecordCudaAttentionCall(model);
+    RecordCudaKvCacheRead(model, static_cast<size_t>(pos + 1) * static_cast<size_t>(n_heads) * static_cast<size_t>(head_dim) * sizeof(float) * 2);
+
+    return attn_out;
+}
+
+
 
 // 残差相加
 static Tensor ForwardAdd(const MiniLlamaModel& model, const Tensor& a, const Tensor& b) {
@@ -583,7 +618,7 @@ static Tensor FfnForward(const MiniLlamaModel& model, const std::string& layer_p
     Tensor up  = ForwardLinear(model, up_name, h, lw.w_up);            // up   = w_up(h)            // [dim] → [hidden_dim]
     
     Tensor act = ForwardSwiGlu(model, gate, up);                       // act  = SiLU(gate) * up    // [hidden_dim]
-    Tensor ff = ForwardLinear(model, down_name, lw.w_dowm);            // ff   = w_down(act)        // [hidden_dim] → [dim]
+    Tensor ff = ForwardLinear(model, down_name, act, lw.w_dowm);            // ff   = w_down(act)        // [hidden_dim] → [dim]
     
     return ff;
 }
@@ -612,18 +647,18 @@ static Tensor ForwardLayer(MiniLlamaContext& ctx, const MiniLlamaModel& model, c
 
     // 首先Rmsnorm归一化，在层数较深的Transform中，能有效控制方差，防止梯度计算爆炸活消失
     //                                     [dim]
-    Tensor h = ForwaradRmsNorm(model, x, lw.attention_norm, c.rms_norm_eps);
+    Tensor h = ForwardRmsNorm(model, x, lw.attention_norm, c.rms_norm_eps);
 
     // QKV投影
     Tensor q_flat;
     Tensor k_flat;
     Tensor v_flat;
-    ForwardQKVProjection(model, layer_prefix, h, lw, q_flat, k_flat, v_flat);
+    ForwardQkvProjection(model, layer_prefix, h, lw, q_flat, k_flat, v_flat);
 
     // 形状转化
     Tensor q = q_flat.ReshapeChecked({n_heads, head_dim}, "forward_layer q");
     Tensor k = k_flat.ReshapeChecked({n_kv_heads, head_dim}, "forward_layer k");
-    Tensorv = v_flat.ReshapeChecked({n_kv_heads, head_dim}, "forward_layer v");
+    Tensor v = v_flat.ReshapeChecked({n_kv_heads, head_dim}, "forward_layer v");
 
 
     // 旋转位置编码
@@ -662,11 +697,70 @@ static Tensor ForwardLayer(MiniLlamaContext& ctx, const MiniLlamaModel& model, c
 }
 
 
+// transform层级计算
+static CudaTensor ForwardLayerDevice(MiniLlamaContext& ctx, const MiniLlamaModel& model, const CudaTensor& x, int layer, const LayerWeights& lw, const ModelConfig& c) {
+    int dim = c.dim;              // 隐藏层维度
+    int n_heads = c.n_heads;      // Q的头数
+    int n_kv_heads = c.n_kv_heads;// kv的头数
+    int head_dim = c.head_dim;    // 每个头的维度
+    int pos = ctx.pos;            // 当前token在seq的位置
+    const std::string layer_prefix = "layers." + std::to_string(layer) + ".";
+
+    // 首先Rmsnorm归一化，在层数较深的Transform中，能有效控制方差，防止梯度计算爆炸活消失
+    //                                     [dim]
+    CudaTensor h = ForwardRmsNormDevice(model, layer_prefix + "attention_norm", x, lw.attention_norm, c.rms_norm_eps);
+
+    // QKV投影
+    CudaTensor q;
+    CudaTensor k;
+    CudaTensor v;
+    ForwardQkvProjectionDevice(model, layer_prefix, h, lw, q, k, v);
+
+
+    // 旋转位置编码
+    ForwardRopeDevice(model, q, k, n_heads, n_kv_heads, head_dim, pos, c.rope_theta, c.rope_type);
+
+
+    // 算注意力 + 读写kvcache
+    // [n_heads, head_dim]
+    CudaTensor attn_out = AttentionForwardDevice(model, q, k ,v, pos, layer, ctx.cuda_kv_cache, n_heads, n_kv_heads, head_dim);
+
+    // 把多头的输出融合成一个dim维向量，让不同头的信息混合 [1, dim]
+    CudaTensor attn_proj = ForwardLinearDevice(model, layer_prefix + "wo", attn_out, lw.wo);   
+
+    if (attn_proj.size() != static_cast<size_t>(dim)) {
+        throw std::runtime_error("forward_layer_device: attention projection shape mismatch");
+    }
+
+
+    // 残差相加
+    CudaTensor x_attn = ForwardAddDevice(model, x, attn_proj);
+
+    // FFN
+    CudaTensor h2 = ForwardRmsNormDevice(model, layer_prefix + "ffn_norm", x_attn, lw.ffn_norm, c.rms_norm_eps);
+    CudaTensor ff = FfnForwardDevice(model, layer_prefix, h2, lw);
+    // 形状检查
+    if (ff.size() != static_cast<size_t>(dim)) {
+        throw std::runtime_error("forward_layer_device: FFN output shape mismatch");
+    }
+    // 残差相加
+    return ForwardAddDevice(model, x_attn, ff);
+}
+
+
 // 把最后一层[dim]转化为logits，得到每个候选token的原始分数
 static Tensor ComputeLogits(const Tensor& x, const MiniLlamaModel& model, const ModelConfig& c) {
     Tensor normed = ForwardRmsNorm(model, x, model.final_norm, c.rms_norm_eps);
     Tensor logits_flat = ForwardLinear(model, "lm_head", normed, model.lm_head);  // [vacab_size]
     return logits_flat.ReshapeChecked({c.vocab_size}, "compute_logits");
+}
+
+
+static Tensor ComputeLogitsDevice(const CudaTensor& x, const MiniLlamaModel& model, const ModelConfig& c) {
+    CudaTensor normed = ForwardRmsNormDevice(model, "final_norm", x, model.final_norm, c.rms_norm_eps);
+    CudaTensor logits_dev = ForwardLinearDevice(model, "lm_head", normed, model.lm_head);  // [vacab_size]
+    Tensor logits = DownloadCudaTensor(model, logits_dev);
+    return logits.ReshapeChecked({c.vocab_size}, "compute_logits_device");
 }
 
 Tensor ForwardToken(MiniLlamaContext& ctx, const MiniLlamaModel& model, int token) {
@@ -678,6 +772,16 @@ Tensor ForwardToken(MiniLlamaContext& ctx, const MiniLlamaModel& model, int toke
     /*
     cuda处理
     */
+    if (model.cuda_weights && ctx.cuda_kv_cache.empty()) {
+        ctx.cuda_kv_cache.Reset(c.n_layers, c.max_seq_len, c.n_kv_heads, c.head_dim, model.cuda_weights->device_id);
+    }
+    if (model.cuda_weights) {
+        CudaTensor x_dev = EmbedTokenDevice(model, token);
+        for (int layer = 0; layer < n_layers; ++layer) {
+            x_dev = ForwardLayerDevice(ctx, model, x_dev, layer, model.layers[layer], c);
+        }
+        return ComputeLogitsDevice(x_dev, model, c);
+    }
 
 
     // 把token_id变为[dim]维的一维向量

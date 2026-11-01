@@ -26,6 +26,7 @@
 #include "mini_llama/cuda_matmul.h"
 #include "mini_llama/cuda_quant.h"
 #include "mini_llama/cuda_ops.h"
+#include "mini_llama/cuda_kv_cache.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -227,3 +228,8 @@ using mini_llama::CudaSoftmax;
 using mini_llama::CudaRope;
 using mini_llama::CudaRopeDeviceInput;
 using mini_llama::CudaEmbeddingLookupDeviceWeight;
+
+
+// cuda_kv_cache
+using mini_llama::CudaKvCache;
+using mini_llama::CudaKvCacheBuilt;
