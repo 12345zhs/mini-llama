@@ -10,6 +10,7 @@
 #include "mini_llama/cuda_quant.h"
 #include "mini_llama/cuda_ops.h"
 #include "mini_llama/cuda_kv_cache.h"
+#include "mini_llama/cuda_attention.h"
 
 #include <stdexcept>
 #include <cstring>
@@ -444,7 +445,7 @@ static Tensor ForwardSoftmax(const MiniLlamaModel& model, const Tensor& x) {
     // GPU
     Tensor y = CudaSoftmax(x, CudaDeviceId(model));
 
-    RecordCudaActivationCall(y);
+    RecordCudaActivationCall(model);
     return y;
 }
 
@@ -459,7 +460,7 @@ static Tensor AttentionForward(const MiniLlamaModel& model, const Tensor& q, con
         cuda_kv_cache->Write(layer, pos, k, v);
         RecordCudaKvCacheWrite(model, cuda_kv_cache->bytes());
 
-        Tensor attn_out = ;
+        Tensor attn_out = CudaAttentionDecode(q, *cuda_kv_cache, layer, pos, n_heads, n_kv_heads, head_dim, CudaDeviceId(model));
 
         RecordCudaAttentionCall(model);
         RecordCudaKvCacheRead(model, static_cast<size_t>(pos + 1) * static_cast<size_t>(n_heads) * static_cast<size_t>(head_dim) * sizeof(float) * 2);
@@ -543,7 +544,7 @@ static CudaTensor AttentionForwardDevice(const MiniLlamaModel& model, const Cuda
     cuda_kv_cache.WriteDevice(layer, pos, k, v);
     RecordCudaKvCacheWrite(model, cuda_kv_cache.bytes());
 
-    CudaTensor attn_out = ;
+    CudaTensor attn_out = CudaAttentionDecodeDeviceInput(q, cuda_kv_cache, layer, pos, n_heads, n_kv_heads, head_dim, CudaDeviceId(model));
 
     RecordCudaAttentionCall(model);
     RecordCudaKvCacheRead(model, static_cast<size_t>(pos + 1) * static_cast<size_t>(n_heads) * static_cast<size_t>(head_dim) * sizeof(float) * 2);

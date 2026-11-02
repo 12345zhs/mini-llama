@@ -50,6 +50,7 @@ set(MINI_LLAMA_CORE_SOURCES
     src/model.cc
     src/cuda_quant.cc
     src/cuda_ops.cc
+    src/cuda_attention.cc
 )
 
 
@@ -57,6 +58,7 @@ if(MINI_LLAMA_CUDA)
     list(APPEND MINI_LLAMA_CORE_SOURCES 
         src/cuda_quant.cu
         src/cuda_ops.cu
+        src/cuda_attention.cu
     )
 endif()
 
@@ -90,6 +92,7 @@ set(TEST_SOURCES
     tests/test_loader.cc
     tests/test_cuda_quant.cc
     tests/test_cuda_ops.cc
+    tests/test_cuda_attention.h
 )
 
 # 建立可执行文件

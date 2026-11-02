@@ -27,6 +27,7 @@
 #include "mini_llama/cuda_quant.h"
 #include "mini_llama/cuda_ops.h"
 #include "mini_llama/cuda_kv_cache.h"
+#include "mini_llama/cuda_attention.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -129,6 +130,10 @@ using mini_llama::ClearModelCudaWeights;
 using mini_llama::UploadModelWeightsToCuda;
 using mini_llama::QuantizeModelToQ80;
 using mini_llama::QuantizeModelToQ40;
+using mini_llama::ModelCudaAttentionCalls;
+using mini_llama::ModelCudaAttentionCpuFallbacks;
+using mini_llama::ModelCudaKvCacheWriteBytes;
+using mini_llama::ModelCudaKvCacheReadBytes;
 
 
 // quant
@@ -233,3 +238,9 @@ using mini_llama::CudaEmbeddingLookupDeviceWeight;
 // cuda_kv_cache
 using mini_llama::CudaKvCache;
 using mini_llama::CudaKvCacheBuilt;
+
+
+// cuda_attention
+using mini_llama::CudaAttentionBuilt;
+using mini_llama::CudaAttentionDecode;
+
