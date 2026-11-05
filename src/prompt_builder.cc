@@ -44,7 +44,7 @@ static std::string Trim(const std::string& s) {
     while (a < s.size() && std::isspace(static_cast<unsigned char>(s[a]))) {
         a++;
     } 
-    size_t b = 0;
+    size_t b = s.size();
     while (b > a && std::isspace(static_cast<unsigned char>(s[b - 1]))) {
         --b;
     }
@@ -393,7 +393,7 @@ static std::string ExecuteTemplate(const std::vector<Instr>& instrs, const std::
                     // 循环体执行完，要开始下一轮循环
                     ForFrame& frame = for_stack.top();
                     ++frame.index;
-                    if (frame.index > message.size()) {
+                    if (frame.index >= message.size()) {
                         // 迭代完了，弹栈
                         for_stack.pop();
                         pc = instr.jump;
@@ -499,7 +499,7 @@ std::string LoadChatTemplateFromGguf(const std::string& gguf_path) {
     if (!GgufGetMetadataString(gguf_path, "tokenizer.chat_template", tmpl)) {
         // gguf里没有模板，看架构名字
         std::string architecture;
-        if (!GgufGetMetadataString(gguf_path, "general.architecture", architecture) && std::strcmp(architecture.c_str(), "qwen2") == 0) {
+        if (GgufGetMetadataString(gguf_path, "general.architecture", architecture) && std::strcmp(architecture.c_str(), "qwen2") == 0) {
             return "qwen2";
         }
         return "";

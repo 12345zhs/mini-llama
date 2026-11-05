@@ -55,7 +55,7 @@ static bool TestChatSessionClearResets() {
   session.Clear();
   MINI_LLAMA_ASSERT_TRUE(session.messages.empty());
   MINI_LLAMA_ASSERT_TRUE(session.token_history.empty());
-  MINI_LLAMA_ASSERT_EQ(session.LongestCachedPrefix({1, 2, 3}), 0);
+  MINI_LLAMA_ASSERT_EQ(session.LongestCachePrefix({1, 2, 3}), 0);
   MINI_LLAMA_ASSERT_EQ(session.total_prompt_tokens, 0);
   MINI_LLAMA_ASSERT_EQ(session.total_generated_tokens, 0);
   MINI_LLAMA_ASSERT_NEAR(session.total_time_ms, 0.0, 1e-6);
@@ -76,9 +76,9 @@ static bool TestChatSessionRecordsPrefixCache() {
   ChatSession session;
   session.RecordPrefix({1, 2, 3, 4});
   session.RecordPrefix({1, 2, 9});
-  MINI_LLAMA_ASSERT_EQ(session.LongestCachedPrefix({1, 2, 3}), 3);
-  MINI_LLAMA_ASSERT_EQ(session.LongestCachedPrefix({1, 2, 9, 8}), 3);
-  MINI_LLAMA_ASSERT_EQ(session.LongestCachedPrefix({1, 8}), 1);
+  MINI_LLAMA_ASSERT_EQ(session.LongestCachePrefix({1, 2, 3}), 3);
+  MINI_LLAMA_ASSERT_EQ(session.LongestCachePrefix({1, 2, 9, 8}), 3);
+  MINI_LLAMA_ASSERT_EQ(session.LongestCachePrefix({1, 8}), 1);
   return true;
 }
 

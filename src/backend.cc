@@ -35,7 +35,7 @@ std::string BackendKindName(BackendKind kind) {
 
 // cuda后端是否建立成功
 bool CudaBackendBuild() {
-    return CudaRuntimeBuild();
+    return CudaRuntimeBuilt();
 }
 
 
@@ -50,7 +50,7 @@ bool CudaBackendAvailable(int device_id) {
 }
 
 
-std::string CudaDeviceSummary(int device_id = 0) {
+std::string CudaDeviceSummary(int device_id) {
     try {
         return CudaFormatDeviceInfo(CudaGetDeviceInfo(device_id));
     } catch (const std::exception& e) {

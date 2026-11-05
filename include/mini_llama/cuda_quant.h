@@ -10,7 +10,7 @@ namespace mini_llama {
 
 bool CudaQuantBuilt();
 
-Tensor CudaQ80Linear(const Tensor& x, const std::vector<BlockQ80>& weight, const std::vector<int>& weight_shape, const Tensor* bias = nullptr, int device_id);
+Tensor CudaQ80Linear(const Tensor& x, const std::vector<BlockQ80>& weight, const std::vector<int>& weight_shape, const Tensor* bias = nullptr, int device_id = 0);
 
 Tensor CudaQ80LinearDeviceWeight(const Tensor& x, const void* q8_0_device, size_t q8_0_block_count, const std::vector<int>& weight_shape, const Tensor* bias = nullptr, int device_id = 0);
 

@@ -142,7 +142,7 @@ std::string CudaTensor::ShapeStringShort() const {
 
 
 // 从cpu的tensor转换到gpu的cuda_tensor
-CudaTensor CudaTensorFromHost(const Tensor& src, int device_id = 0) {
+CudaTensor CudaTensorFromHost(const Tensor& src, int device_id) {
     CudaTensor dst(src.shape, device_id);
     dst.UploadFrom(src);
     return dst;

@@ -25,20 +25,20 @@ void KvCache::Write(int layer, int pos, const Tensor& k, const Tensor& v) {
     Require4DCacheSHape(keys, "keys");
     Require4DCacheSHape(values, "values");
     if (k.num_dims() != 2 || v.num_dims() != 2 || k.shape != v.shape) {
-        throw std::runtime_error("KvCache::Write expected matching [n_kv_heads, head_dim] tensors");
+        throw std::out_of_range("KvCache::Write expected matching [n_kv_heads, head_dim] tensors");
     }
 
     int n_kv_heads = k.shape[0];
     int head_dim = k.shape[1];
 
     if (layer < 0 || layer >= keys.shape[0]) {
-        throw std::runtime_error("KvCache::Write layer out of range");
+        throw std::out_of_range("KvCache::Write layer out of range");
     }
     if (pos < 0 || pos >= keys.shape[1]) {
-        throw std::runtime_error("KvCache::Write position out of range");
+        throw std::out_of_range("KvCache::Write position out of range");
     }
     if (n_kv_heads != keys.shape[2] || head_dim != keys.shape[3]) {
-        throw std::runtime_error("KvCache::Write tensor shape does not match cache shape");
+        throw std::out_of_range("KvCache::Write tensor shape does not match cache shape");
     }
 
     size_t layer_stride = static_cast<size_t>(keys.shape[1] * keys.shape[2] * keys.shape[3]);

@@ -40,7 +40,12 @@ set(MINI_LLAMA_CORE_SOURCES
     src/quant.cc
     src/quantized_tensor.cc
     src/thread_pool.cc
-    
+    src/kv_cache.cc
+    src/context.cc
+    src/loader.cc   
+    src/batch.cc 
+    src/debug.cc
+    src/forward.cc
 
     # gpu的运行文件
     src/cuda_runtime.cc
@@ -50,6 +55,8 @@ set(MINI_LLAMA_CORE_SOURCES
     src/model.cc
     src/cuda_quant.cc
     src/cuda_ops.cc
+    src/cuda_attention.cc
+    src/cuda_kv_cache.cc
     src/cuda_attention.cc
 )
 
@@ -92,7 +99,7 @@ set(TEST_SOURCES
     tests/test_loader.cc
     tests/test_cuda_quant.cc
     tests/test_cuda_ops.cc
-    tests/test_cuda_attention.h
+    tests/test_cuda_attention.cc
 )
 
 # 建立可执行文件

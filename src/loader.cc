@@ -1,5 +1,6 @@
 #include "mini_llama/loader.h"
 #include "mini_llama/model.h"
+#include "mini_llama/quantized_tensor.h"
 
 #include <sstream>
 #include <fstream>
@@ -91,7 +92,7 @@ static int ParseRequiredInt(const std::string& content, const std::string& key) 
 static float ParseRequiredFloat(const std::string& content, const std::string& key) {
     size_t value_pos = FindConfigKey(content, key);
     size_t parsed = 0;
-    float value;
+    float value = 0.0f;
     try {
         value = std::stof(content.substr(value_pos), &parsed);
     } catch(const std::exception&) {
@@ -123,11 +124,11 @@ static void validateConfig(const ModelConfig& config) {
         throw std::runtime_error("head_dim must be a positive even number");
     }
 
-    if (config.rope_theta <= 0.0f || std::isfinite(config.rope_theta)) {
+    if (config.rope_theta <= 0.0f || !std::isfinite(config.rope_theta)) {
         throw std::runtime_error("rope_theta must be positive");
     }
 
-    if (config.rms_norm_eps <= 0.0f || std::isfinite(config.rms_norm_eps)) {
+    if (config.rms_norm_eps <= 0.0f || !std::isfinite(config.rms_norm_eps)) {
         throw std::runtime_error("rms_norm_eps must be positive");
     }
 }
@@ -266,7 +267,7 @@ static TokenizerInfo ParseTokenizerJson(const std::string& content) {
     tokenizer.eos_id = ParseOptionalIntField(obj, "eos_id", tokenizer.eos_id);
     tokenizer.unk_id = ParseOptionalIntField(obj, "unk_id", tokenizer.unk_id);
 
-    if (tokenizer.type != "ascii" && tokenizer.type != "json_vacab") {
+    if (tokenizer.type != "ascii" && tokenizer.type != "json_vocab") {
         throw std::runtime_error("unsupported tokenizer type: " + tokenizer.type);
     }
     if (tokenizer.bos_id < 0 || tokenizer.eos_id < 0 || tokenizer.unk_id < 0) {
@@ -275,7 +276,7 @@ static TokenizerInfo ParseTokenizerJson(const std::string& content) {
     if (tokenizer.bos_id == tokenizer.eos_id || tokenizer.bos_id == tokenizer.unk_id || tokenizer.eos_id == tokenizer.unk_id) {
         throw std::runtime_error("tokenizer special ids must be distinct");
     }
-    if (tokenizer.type == "json_vacab" && tokenizer.path.empty()) {
+    if (tokenizer.type == "json_vocab" && tokenizer.path.empty()) {
         throw std::runtime_error("json_vocab tokenizer requires a path");
     }
     return tokenizer;
@@ -358,7 +359,7 @@ static std::vector<TensorInfo> ParseTensorMetadata(const std::string& content) {
         // 解析dtype
         size_t dtype_pos = obj.find("\"dtype\"");
         if (dtype_pos != std::string::npos) {
-            size_t dtype_colon = obj.find(":", name_pos);
+            size_t dtype_colon = obj.find(":", dtype_pos);
             size_t dtype_quote = obj.find("\"", dtype_colon + 1);
             size_t dtype_end = obj.find("\"", dtype_quote + 1);
 
@@ -567,14 +568,17 @@ static void ValidateManifest(const ModelManifest& manifest) {
             }
         }
 
-        for (const auto& expected : ExpectedTensorShapes(manifest.config)) {
-            auto it = tensor_map.find(expected.first);
-            if (it == tensor_map.end()) {
-                throw std::runtime_error("missing required tensor: " + expected.first);
-            }
-            if (it->second.shape != expected.second) {
-                throw std::runtime_error("tensor shape mismatch for " + expected.first + ": expected " + ShapeToString(expected.second) + ", manifest says " + ShapeToString(it->second.shape));
-            }
+        
+    }
+
+    // 整个 tensor_map 建好之后，再检查所有必需名称和形状
+    for (const auto& expected : ExpectedTensorShapes(manifest.config)) {
+        auto it = tensor_map.find(expected.first);
+        if (it == tensor_map.end()) {
+            throw std::runtime_error("missing required tensor: " + expected.first);
+        }
+        if (it->second.shape != expected.second) {
+            throw std::runtime_error("tensor shape mismatch for " + expected.first + ": expected " + ShapeToString(expected.second) + ", manifest says " + ShapeToString(it->second.shape));
         }
     }
 
@@ -689,7 +693,7 @@ MiniLlamaModel LoadModel(const std::string& config_path, const std::string& weig
 
     try {
         model.token_embedding = LoadTensorByName(wf, tensor_map, "token_embedding");
-        model.layers.reserve(manifest.config.n_layers);
+        model.layers.resize(manifest.config.n_layers);
 
         // 给每一层layer传权重
         for (int layer = 0; layer < manifest.config.n_layers; ++layer) {
@@ -710,7 +714,7 @@ MiniLlamaModel LoadModel(const std::string& config_path, const std::string& weig
         }
 
         model.final_norm = LoadTensorByName(wf, tensor_map, "final_norm");
-        model.lm_head = LoadTensorByName(wf, tensor_map, "lm_head");
+        model.lm_head = ToQuantizedTensor(LoadTensorByName(wf, tensor_map, "lm_head"));
 
 
     } catch (const std::exception& e) {

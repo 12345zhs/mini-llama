@@ -270,22 +270,23 @@ static uint64_t ParseAlignment(const std::vector<GgufMetadataKv>& metadata) {
             return 0;
         }
 
-        if (alignment == 0 || alignment > kDefaultAlignment) {
+        if (alignment == 0) {
             return 0;
         }
         // 必须是2的幂次（因为2的幂次中，二进制只存在1个1）
-        if (alignment & (alignment - 1) != 0) {
+        if ((alignment & (alignment - 1)) != 0) {
             return 0;
         }
 
         return alignment;
     }
+    return alignment;
 }
 
 
 // 检查参数是否可以进行乘法，并进行计算
 static bool MultiplyChecked(uint64_t a, uint64_t b, uint64_t& out) {
-    if (a != 0 && b * a > std::numeric_limits<uint64_t>::max()) {
+    if (a != 0 && b  > std::numeric_limits<uint64_t>::max() / a) {
         return false;
     }
     out = a * b;
@@ -296,7 +297,7 @@ static bool MultiplyChecked(uint64_t a, uint64_t b, uint64_t& out) {
 static bool TensorNumel(const GgufTensorInfo& tensor, uint64_t& out) {
     out = 1;
     for (uint64_t dim : tensor.shape) {
-        if (dim = 0) {
+        if (dim == 0) {
             return false;
         }
         if (!MultiplyChecked(out, dim, out)) {
@@ -353,7 +354,7 @@ static bool TensorDataSize(const GgufTensorInfo& tensor, uint64_t& out) {
     
 // 检查参数是否可以进行加法，并计算结果
 static bool AddChecked(uint64_t a, uint64_t b, uint64_t& out) {
-    if (b + a > std::numeric_limits<uint64_t>::max()) {
+    if (b > std::numeric_limits<uint64_t>::max() - a) {
         return false;
     }
     out = a + b;
@@ -362,7 +363,7 @@ static bool AddChecked(uint64_t a, uint64_t b, uint64_t& out) {
 
 
 // 把tensor枚举值转化为string
-const char* GgmlTypename(uint32_t type) {
+const char* GgmlTypeName(uint32_t type) {
     switch(type) {
         case kGgmlTypeF32:
             return "F32";
@@ -499,7 +500,7 @@ bool GgufReader::Load(const std::string& path) {
 
     // 循环解析tensor
     tensors.reserve(n_tensors);
-    for (uint64_t i = 0; i < n_metadata; ++i) {
+    for (uint64_t i = 0; i < n_tensors; ++i) {
         GgufTensorInfo info;
         // 张量名字
         if (!ReadString(f, info.name)) {
@@ -643,7 +644,7 @@ void InspectGguf(const GgufReader& reader) {
                 std::cout << t.shape[i];
             }
             std::cout << "]" << std::endl;
-            std::cout << "    dtype:  " << GgmlTypename(t.type) << " (" << t.type << ")" << std::endl;
+            std::cout << "    dtype:  " << GgmlTypeName(t.type) << " (" << t.type << ")" << std::endl;
             std::cout << "    offset: " << t.offset << std::endl;
         }
     }
@@ -696,7 +697,7 @@ bool GgufTensorDataSize(const GgufTensorInfo& info, uint64_t& out_size) {
 }
 
 // 找到对应的key，返回value的类型
-bool OpenAndFindMetadataKey(std::ifstream& f, const std::string& path, const std::string& key, uint32_t out_type) {
+bool OpenAndFindMetadataKey(std::ifstream& f, const std::string& path, const std::string& key, uint32_t& out_type) {
     f.open(path, std::ios::binary);
     if (!f.is_open()) {
         return false;

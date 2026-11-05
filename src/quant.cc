@@ -203,7 +203,7 @@ std::vector<BlockQ40> QuantizeToQ40(const Tensor& src) {
         return {};
     }
 
-    int row_size = src.num_dims() >= 2 ? src.shape.back() : static_cast<int>(src.num_dims());
+    int row_size = src.num_dims() >= 2 ? src.shape.back() : static_cast<int>(src.num_elements());
     int n_row =  src.num_dims() >= 2 ? static_cast<int>(src.num_elements()) / row_size : 1;
     int row_blocks = (row_size + kQ40BlockSize - 1) / kQ40BlockSize;
     size_t total_block = static_cast<size_t>(n_row) * row_blocks;
@@ -232,7 +232,7 @@ std::vector<BlockQ40> QuantizeToQ40(const Tensor& src) {
                 float d = max_abs / 7;        // 半个字节，范围是[-7, 7];
                 block.d = FloatToFp16(d);
                 float store_d = Fp16ToFloat(block.d);
-                float id = store_d == 0.0f ? 0.0f : store_d;
+                float id = store_d == 0.0f ? 0.0f :  1.0f / store_d;
 
                 for (int j = 0; j < kQ40BlockSize / 2; ++j) {
                     float x0 = 0.0f;
@@ -378,19 +378,19 @@ static Tensor LinearQuantizedImpl(const Tensor& x, const std::vector<BlockType>&
         rows = x.shape[0];
         in_features = x.shape[1];
     } else {
-        throw std::runtime_error("linear_quantized: expected x shape [in_features] or [batch, " + "in_features], got " + x.ShapeStringShort());
+        throw std::runtime_error("linear_quantized: expected x shape [in_features] or [batch, " "in_features], got " + x.ShapeToStringShort());
     }
 
     int out_features = weight_shape[0];
     if (weight_shape[1] != in_features) {
-        throw std::runtime_error("linear_quantized: dimension mismatch x=" + x.ShapeStringShort() + " weight=" + QuantizedTensor{QuantType::kF32, weight_shape}.ShapeStringShort());
+        throw std::runtime_error("linear_quantized: dimension mismatch x=" + x.ShapeToStringShort() + " weight=" + QuantizedTensor{QuantType::kF32, weight_shape}.ShapeStringShort());
     }
 
     // 权重矩阵有多少个block
     int n_blocks_per_row = (in_features + kBlockSize - 1) / kBlockSize;
     size_t expected_blocks = static_cast<size_t>(out_features) * n_blocks_per_row;
     if (expected_blocks != blocks.size()) {
-        throw std::runtime_error("linear_quantized: dimension mismatch x=" + x.ShapeStringShort() + " weight=" + QuantizedTensor{QuantType::kF32, weight_shape}.ShapeStringShort());
+        throw std::runtime_error("linear_quantized: dimension mismatch x=" + x.ShapeToStringShort() + " weight=" + QuantizedTensor{QuantType::kF32, weight_shape}.ShapeStringShort());
     }
 
     Tensor result(is_1d ? std::vector<int>({out_features}) : std::vector<int>({rows, out_features}), 0.0f);
@@ -485,7 +485,7 @@ Tensor MatmulQ40(const std::vector<BlockQ40>& weight, const Tensor& input, const
 
 
 float CompareMatmulError(const Tensor& weight, const Tensor& input) {
-    Tensor f32_result = Linear(weight, input);
+    Tensor f32_result = Matmul(weight, input);
     std::vector<BlockQ80> qweight = QuantizeToQ80(weight);
     Tensor q8_result = MatmulQ80(qweight, input, weight.shape);
 
@@ -505,7 +505,7 @@ float CompareMatmulError(const Tensor& weight, const Tensor& input) {
 
 
 float CompareQ40Error(const Tensor& weight, const Tensor& input) {
-    Tensor f32_result = Linear(weight, input);
+    Tensor f32_result = Linear(input, weight);
     std::vector<BlockQ40> qweight = QuantizeToQ40(weight);
     Tensor q4_result = LinearQ40(input, qweight, weight.shape);
     

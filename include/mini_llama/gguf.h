@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <string>
 
 namespace mini_llama {
 
@@ -66,7 +67,7 @@ struct GgufReader {
 };
 
 // 辅助函数
-const char* GgmlTypename(uint32_t type);
+const char* GgmlTypeName(uint32_t type);
 const char* GgufValueTypeName(uint32_t type);
 
 // 解析查看

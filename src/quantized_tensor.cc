@@ -57,7 +57,7 @@ Tensor ToTensor(const QuantizedTensor& q) {
 
 
 // tensor 转变为 quantizedtensor
-QuantizedTensor toQuantizedTensor(const Tensor& t) {
+QuantizedTensor ToQuantizedTensor(const Tensor& t) {
     QuantizedTensor q;
     q.type = QuantType::kF32;
     q.shape = t.shape;

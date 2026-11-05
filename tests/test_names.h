@@ -28,6 +28,7 @@
 #include "mini_llama/cuda_ops.h"
 #include "mini_llama/cuda_kv_cache.h"
 #include "mini_llama/cuda_attention.h"
+#include "mini_llama/gguf_loader.h"
 
 // tensor
 using mini_llama::Tensor;
@@ -92,7 +93,7 @@ using mini_llama::Terminal;
 using mini_llama::GgufReader;
 using mini_llama::GgufTensorInfo;
 using mini_llama::GgufMetadataKv;
-using mini_llama::GgmlTypename;
+using mini_llama::GgmlTypeName;
 using mini_llama::GgufValueTypeName;
 using mini_llama::GgmlType;
 using mini_llama::GgufValueType;
@@ -243,4 +244,13 @@ using mini_llama::CudaKvCacheBuilt;
 // cuda_attention
 using mini_llama::CudaAttentionBuilt;
 using mini_llama::CudaAttentionDecode;
+
+
+
+// gguf_loader
+using mini_llama::LoadGgufModel;
+using mini_llama::MiniLlamaModel;
+using mini_llama::MiniLlamaContext;
+using mini_llama::LayerWeights;
+using mini_llama::ForwardToken;
 

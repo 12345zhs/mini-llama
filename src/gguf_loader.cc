@@ -42,7 +42,7 @@ static ModelConfig BuildConfig(const std::string& path) {
     // 配置层数
     config.n_layers = get_u32("qwen2.block_count", get_u32("llama.block_count", 0));
     // 配置隐藏层维数
-    config.dim = get_u32("qwen2.emdedding_length", get_u32("llama.embedding_length", 0));
+    config.dim = get_u32("qwen2.embedding_length", get_u32("llama.embedding_length", 0));
     // FFN中间层维度
     config.hidden_dim = get_u32("qwen2.feed_forward_length", get_u32("llama.feed_forward_length", 0));
     // Q头数
@@ -52,9 +52,9 @@ static ModelConfig BuildConfig(const std::string& path) {
     // 最大上下文长度
     config.max_seq_len = get_u32("qwen2.context_length", get_u32("llama.context_length", 0));
     // rope的参数
-    config.rope_theta = get_u32("qwen2.rope.freq_base", get_u32("llama.rope.freq_base", 0));
+    config.rope_theta = get_f32("qwen2.rope.freq_base", get_f32("llama.rope.freq_base", 0));
     // RMSNorm的参数
-    config.rms_norm_eps = get_u32("qwen2.attention.layer_norm_rms_epsilon", get_u32("llama.attention.layer_norm_rms_epsilon", 0));
+    config.rms_norm_eps = get_f32("qwen2.attention.layer_norm_rms_epsilon", get_f32("llama.attention.layer_norm_rms_epsilon", 0));
 
 
     // 获取此表大小
@@ -184,7 +184,7 @@ static QuantizedTensor LoadQuantizedTensor(const std::vector<uint8_t>& raw, cons
     // 计算tensor的总数量
     size_t num_elements = 1;
     for (int d : shape) {
-        num_elements *= shape[d];
+        num_elements *= d;
     }
 
     QuantizedTensor q;
@@ -254,7 +254,7 @@ static void RequireShape(const QuantizedTensor& tensor, const std::vector<int>& 
 }
 
 
-static void RequireOptionalShape(const QuantizedTensor& tensor, const std::vector<int>& expected, const std::string& name) {
+static void RequireOptionalShape(const Tensor& tensor, const std::vector<int>& expected, const std::string& name) {
     if (tensor.data.empty()) {
         return;
     }
@@ -267,7 +267,7 @@ static void ValidateLoadedShapes(const MiniLlamaModel& model) {
     const int kv_dim = c.n_kv_heads * c.head_dim;
 
     RequireShape(model.token_embedding, {c.vocab_size, c.dim}, "GGUF token_embedding");
-    RequireShape(model.final_norm, {c.vocab_size, c.dim}, "GGUF final_norm");
+    RequireShape(model.final_norm, {c.dim}, "GGUF final_norm");
     RequireShape(model.lm_head, {c.vocab_size, c.dim}, "GGUF lm_head");
 
     if (model.layers.size() != static_cast<int>(c.n_layers)) {
@@ -386,7 +386,7 @@ MiniLlamaModel LoadGgufModel(const std::string& gguf_path) {
 
 
     try {
-        model.token_embedding = load_f32("token_emdedding");
+        model.token_embedding = load_f32("token_embedding");
         model.final_norm = load_f32("final_norm");
         model.layers.resize(c.n_layers);
         for (int layer = 0; layer < c.n_layers; ++layer) {
@@ -402,16 +402,17 @@ MiniLlamaModel LoadGgufModel(const std::string& gguf_path) {
             lw.bv = load_optional_f32(prefix + "bv");
             lw.wo = load_weight(prefix + "wo");
             lw.ffn_norm = load_f32(prefix + "ffn_norm");
-            lw.w_gate = load_weight(prefix + "w_up");
-            lw.w_down = load_weight(prefix + "w_dowm");
+            lw.w_gate = load_weight(prefix + "w_gate");
+            lw.w_up = load_weight(prefix + "w_up");
+            lw.w_down = load_weight(prefix + "w_down");
         }
 
         // 有的模型没有lm_head,就用token_embedding
         auto it = tensor_map.find("lm_head");
         if (it != tensor_map.end()) {
-            model.lm_haed = load_weight("lm_weight");
+            model.lm_head = load_weight("lm_head");
         } else {
-            model.lm_haed = ToQuantizedTensor(model.token_embedding);
+            model.lm_head = ToQuantizedTensor(model.token_embedding);
         }
         
         ValidateLoadedShapes(model);

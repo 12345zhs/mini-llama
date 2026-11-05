@@ -62,7 +62,7 @@ struct QuantizedTensor {
 };
 
 Tensor ToTensor(const QuantizedTensor& q);
-QuantizedTensor toQuantizedTensor(const Tensor& t);
+QuantizedTensor ToQuantizedTensor(const Tensor& t);
 
 
 }

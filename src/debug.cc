@@ -12,7 +12,7 @@
 namespace mini_llama {
 
 // 总体生成速度
-double BenchmarkResult::tokens_pre_sec() const {
+double BenchmarkResult::tokens_per_sec() const {
     double total_ms = prefill_ms + decode_ms;
     if (total_ms <= 0.0) {
         return 0.0;
@@ -22,7 +22,7 @@ double BenchmarkResult::tokens_pre_sec() const {
 }
 
 // 生成阶段的素的
-double BenchmarkResult::decode_tokens_pre_sec() const {
+double BenchmarkResult::decode_tokens_per_sec() const {
     if (decode_ms <= 0.0 || n_decode_tokens <= 0) {
         return 0.0;
     }
@@ -74,7 +74,7 @@ void DumpLogitsTopK(const Tensor& logits, int k) {
 }
 
 // 打印KvCache信息
-void DumpKvCacheInfo(const KvCache& cache, int current_pos = -1) {
+void DumpKvCacheInfo(const KvCache& cache, int current_pos) {
     int n_layers = cache.keys.shape[0];
     int seq_len = cache.keys.shape[1];
     int n_kv_heads = cache.keys.shape[2];
@@ -134,7 +134,8 @@ BenchmarkResult RunBenchmark(const MiniLlamaModel& model, const std::vector<int>
         auto decode_start = std::chrono::steady_clock::now();
 
         // decode forward
-        for (int i = 0; i < n_predict && static_cast<int>(tokens.size()) < model.config.max_seq_len; ++i) {
+        // 第一次采样已经生成并计数一次,之后的循环又运行 n_predict 次
+        for (int i = 1; i < n_predict && static_cast<int>(tokens.size()) < model.config.max_seq_len; ++i) {
             MiniBatch decode = MiniBatch::Single(tokens.back(), static_cast<int>(tokens.size() - 1));        // 把新加入的token形成一个batch
             logits = ForwardBatch(ctx, model, decode);           // forward
             ++result.n_decode_tokens;
@@ -158,6 +159,7 @@ BenchmarkResult RunBenchmark(const MiniLlamaModel& model, const std::vector<int>
     if (verbose) {
         DumpKvCacheInfo(ctx.kv_cache, ctx.pos);
     }
+    return result;
 }
 
 }

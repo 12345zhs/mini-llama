@@ -310,7 +310,7 @@ size_t ModelWeightBytes(const MiniLlamaModel& model) {
         bytes += TensorByts(lw.ffn_norm);
         bytes += QuantizedTensorBytes(lw.w_gate);
         bytes += QuantizedTensorBytes(lw.w_up);
-        bytes += QuantizedTensorBytes(lw.w_dowm);
+        bytes += QuantizedTensorBytes(lw.w_down);
     }
     return bytes;
 }
@@ -335,7 +335,7 @@ size_t ModelWeightBytesF32(const MiniLlamaModel& model) {
         bytes += TensorByts(lw.ffn_norm);
         bytes += QuantizedTensorBytesF32(lw.w_gate);
         bytes += QuantizedTensorBytesF32(lw.w_up);
-        bytes += QuantizedTensorBytesF32(lw.w_dowm);
+        bytes += QuantizedTensorBytesF32(lw.w_down);
     }
     return bytes;
 }
@@ -368,7 +368,7 @@ void UploadModelWeightsToCuda(MiniLlamaModel& model, int device_id) {
         UploadF32TensorWeight(*storage, lw.ffn_norm,  prefix + "ffn_norm", device_id);
         UploadLinearWeight(*storage, lw.w_gate, prefix + "w_gate", device_id);
         UploadLinearWeight(*storage, lw.w_up, prefix + "w_up", device_id);
-        UploadLinearWeight(*storage, lw.w_dowm, prefix + "w_dowm", device_id);
+        UploadLinearWeight(*storage, lw.w_down, prefix + "w_down", device_id);
     }
 }
 
@@ -544,7 +544,7 @@ void QuantizeModelToQ80(MiniLlamaModel& model) {
         QuantizeQtToQ80(lw.wo);
         QuantizeQtToQ80(lw.w_gate);
         QuantizeQtToQ80(lw.w_up);
-        QuantizeQtToQ80(lw.w_dowm);
+        QuantizeQtToQ80(lw.w_down);
     }
 }
 
@@ -559,7 +559,7 @@ void QuantizeModelToQ40(MiniLlamaModel& model) {
         QuantizeQtToQ40(lw.wo);
         QuantizeQtToQ40(lw.w_gate);
         QuantizeQtToQ40(lw.w_up);
-        QuantizeQtToQ40(lw.w_dowm);
+        QuantizeQtToQ40(lw.w_down);
     }
 }
 

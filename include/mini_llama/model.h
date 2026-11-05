@@ -50,7 +50,7 @@ struct LayerWeights {
     Tensor ffn_norm;              // FFN前的RMSnorm权重
     QuantizedTensor w_gate;       // [hidden_dim, dim]
     QuantizedTensor w_up;         // [hidden_dim, dim]
-    QuantizedTensor w_dowm;       // [dim, hidden_dim]
+    QuantizedTensor w_down;       // [dim, hidden_dim]
 };
 
 

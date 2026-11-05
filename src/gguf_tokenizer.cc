@@ -247,7 +247,7 @@ std::vector<int> GgufTokenizer::Encode(const std::string& text) const {
                 }
             }
 
-            if (best_idx > word.size()) {
+            if (best_idx >= word.size()) {
                 break;
             }
             word[best_idx] += word[best_idx + 1];
@@ -325,7 +325,7 @@ int GgufTokenizer::unk_id() const {
 }
 
 
-std::unique_ptr<ITokenizer> GreateGgufTokenizer(const std::string& gguf_path) {
+std::unique_ptr<ITokenizer> CreateGgufTokenizer(const std::string& gguf_path) {
     auto tok = std::make_unique<GgufTokenizer>();
     if (tok->Load(gguf_path)) {
         return tok;

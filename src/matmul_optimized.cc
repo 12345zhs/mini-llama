@@ -73,7 +73,7 @@ static Tensor LinearNaive(const Tensor& x, const Tensor& weight) {
 static Tensor LinearThreaded(const Tensor& x, const Tensor& weight) {
     int in_features = weight.shape[1];
     int out_features = weight.shape[0];
-    bool is_1d = (weight.num_dims() == 1);
+    bool is_1d = (x.num_dims() == 1);
 
     Tensor result(is_1d ? std::vector<int>({out_features}) : std::vector<int>({1, out_features}), 0.0f);
 
@@ -82,7 +82,7 @@ static Tensor LinearThreaded(const Tensor& x, const Tensor& weight) {
         for (int j = begin; j < end; ++j) {
             float sum = 0.0f;
             for (int k = 0; k < in_features; ++k) {
-                sum += x[j] * weight[j * in_features + k];
+                sum += x.data[k] * weight[j * in_features + k];
             }
             result.data[j] = sum;
         }

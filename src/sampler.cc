@@ -27,7 +27,7 @@ static void ValidateLogits(const Tensor& logits) {
 
 // 校验temperature
 static void ValidateTemperature(float temperature) {
-    if (std::isfinite(temperature) || temperature < 0.0f) {
+    if (!std::isfinite(temperature) || temperature < 0.0f) {
         throw std::runtime_error("Sampler: temperature must be finite and non-negative");
     }
 }
@@ -75,7 +75,7 @@ static int SampleFromCandidates(const std::vector<std::pair<float, int>>& candid
     }
 
     // 按概率采样 轮盘赌
-    std::uniform_int_distribution<float> dist(0.0f, 1.0f);
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
     float r = dist(rng);    // 生成一个随机数
     float cumulative = 0.0f;
     for (size_t i = 0; i < probs.size(); ++i) {
@@ -91,7 +91,7 @@ static int SampleFromCandidates(const std::vector<std::pair<float, int>>& candid
 
 MiniSampler::MiniSampler(unsigned int seed) {
     // seed不等于0，就指定种子初始化，等于零了就获取一个真随机数去初始化
-    if (seed == 0) {
+    if (seed != 0) {
         rng_.seed(seed);
     } else {
         std::random_device rd;

@@ -35,6 +35,7 @@ Tensor Linear(const Tensor& x, const QuantizedTensor& weight) {
 
         throw std::runtime_error("Linear: unknown quant type");
     }
+    throw std::runtime_error("Linear: unknown quant type");
 }
 
 

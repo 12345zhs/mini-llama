@@ -168,7 +168,7 @@ CudaDeviceBuffer::~CudaDeviceBuffer() {
 }
 
 
-CudaDeviceBuffer::CudaDeviceBuffer(size_t type, int device_id = 0) {
+CudaDeviceBuffer::CudaDeviceBuffer(size_t type, int device_id) {
     Reset(type, device_id);
 }
 

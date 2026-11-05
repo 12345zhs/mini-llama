@@ -1,5 +1,3 @@
-#pragma once
-
 #include "mini_llama/forward.h"
 #include "mini_llama/context.h"
 #include "mini_llama/model.h"
@@ -11,6 +9,8 @@
 #include "mini_llama/cuda_ops.h"
 #include "mini_llama/cuda_kv_cache.h"
 #include "mini_llama/cuda_attention.h"
+#include "mini_llama/cuda_runtime.h"
+#include "mini_llama/cuda_tensor.h"
 
 #include <stdexcept>
 #include <cstring>
@@ -18,6 +18,35 @@
 #include <vector>
 
 namespace mini_llama {
+
+// 从minillamaModel.weights中找对应的weight
+static const CudaUploadedWeight* FindCudaWeight(const MiniLlamaModel& model, const std::string& name, QuantType type) {
+    if (!model.cuda_weights) {
+        return nullptr;
+    }
+    for (const auto& weight : model.cuda_weights->weights) {
+        if (weight.name == name && weight.type == type) {
+            return &weight;
+        }
+    }
+    return nullptr;
+}
+
+
+// 获取model的device_id
+static int CudaDeviceId(const MiniLlamaModel& model) {
+    return model.cuda_weights ? model.cuda_weights->device_id : 0;
+}
+
+
+
+// 统计调用了几次激活函数
+static void RecordCudaActivationCall(const MiniLlamaModel& model, size_t calls = 1) {
+    if (!model.cuda_weights) {
+        return;
+    }
+    model.cuda_weights->activation_calls += calls;
+}
 
 
 // 防御性校验，前向传播输入校验函数
@@ -99,18 +128,7 @@ static bool CudaLinearSupported(const QuantizedTensor& weight) {
 
 
 
-// 从minillamaModel.weights中找对应的weight
-static const CudaUploadedWeight* FindCudaWeight(const MiniLlamaModel& model, const std::string& name, QuantType type) {
-    if (!model.cuda_weights) {
-        return nullptr;
-    }
-    for (const auto& weight : model.cuda_weights->weights) {
-        if (weight.name == name && weight.type == type) {
-            return &weight;
-        }
-    }
-    return nullptr;
-}
+
 
 // 记录linear中cuda权重的数据搬运情况
 static void RecordCudaLinearCopy(const MiniLlamaModel& model, const Tensor& x, const Tensor& y) {
@@ -155,13 +173,7 @@ static void RecordCudaDeviceToHostCopy(const MiniLlamaModel& model, size_t bytes
 }
 
 
-// 统计调用了几次激活函数
-static void RecordCudaActivationCall(const MiniLlamaModel& model, size_t calls = 1) {
-    if (!model.cuda_weights) {
-        return;
-    }
-    model.cuda_weights->activation_calls += calls;
-}
+
 
 
 // 统计调用了多少次注意力计算
@@ -202,10 +214,7 @@ static void RecordCudaKvCacheRead(const MiniLlamaModel& model, size_t bytes) {
 
 
 
-// 获取model的device_id
-static int CudaDeviceId(const MiniLlamaModel& model) {
-    return model.cuda_weights ? model.cuda_weights->device_id : 0;
-}
+
 
 
 
@@ -602,7 +611,7 @@ static Tensor FfnForward(const MiniLlamaModel& model, const std::string& layer_p
     const std::string down_name = layer_prefix + "w_down";
 
     // GPU
-    if (CudaLinearReady(model, gate_name, lw.w_gate) && CudaLinearReady(model, up_name, lw.w_up) &&  CudaLinearReady(model, down_name, lw.w_dowm)) {
+    if (CudaLinearReady(model, gate_name, lw.w_gate) && CudaLinearReady(model, up_name, lw.w_up) &&  CudaLinearReady(model, down_name, lw.w_down)) {
         CudaTensor h_dev = UploadCudaTensor(model, h);
         CudaTensor gate_dev = ForwardLinearDevice(model, gate_name, h_dev, lw.w_gate);
         CudaTensor up_dev = ForwardLinearDevice(model, up_name, h_dev, lw.w_up);
@@ -610,7 +619,7 @@ static Tensor FfnForward(const MiniLlamaModel& model, const std::string& layer_p
         CudaTensor ff_dev = CudaElementwiseMulDeviceInput(silu_gate_dev, up_dev, CudaDeviceId(model));
 
         RecordCudaActivationCall(model, 2);
-        CudaTensor out_dev = ForwardLinearDevice(model, down_name, ff_dev, lw.w_dowm);
+        CudaTensor out_dev = ForwardLinearDevice(model, down_name, ff_dev, lw.w_down);
         return DownloadCudaTensor(model, out_dev);
     }
 
@@ -619,7 +628,7 @@ static Tensor FfnForward(const MiniLlamaModel& model, const std::string& layer_p
     Tensor up  = ForwardLinear(model, up_name, h, lw.w_up);            // up   = w_up(h)            // [dim] → [hidden_dim]
     
     Tensor act = ForwardSwiGlu(model, gate, up);                       // act  = SiLU(gate) * up    // [hidden_dim]
-    Tensor ff = ForwardLinear(model, down_name, act, lw.w_dowm);            // ff   = w_down(act)        // [hidden_dim] → [dim]
+    Tensor ff = ForwardLinear(model, down_name, act, lw.w_down);            // ff   = w_down(act)        // [hidden_dim] → [dim]
     
     return ff;
 }
@@ -632,7 +641,7 @@ static CudaTensor FfnForwardDevice(const MiniLlamaModel& model, const std::strin
     CudaTensor silu_gate = CudaSiluDeviceInput(gate, CudaDeviceId(model));
     CudaTensor ff = CudaElementwiseMulDeviceInput(silu_gate, up, CudaDeviceId(model));
     RecordCudaActivationCall(model, 2);
-    CudaTensor out_dev = ForwardLinearDevice(model, layer_prefix + "w_down", ff, lw.w_dowm);
+    CudaTensor out_dev = ForwardLinearDevice(model, layer_prefix + "w_down", ff, lw.w_down);
     return out_dev;
 }
 

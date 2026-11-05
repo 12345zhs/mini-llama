@@ -15,7 +15,7 @@ bool CudaQuantBuilt() {
     return true;
 #else 
     return false;
-#endif;
+#endif
 }
 
 #ifndef MINI_LLAMA_USE_CUDA

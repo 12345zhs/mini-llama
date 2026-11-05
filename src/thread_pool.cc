@@ -21,7 +21,7 @@ void SetThreadCount(int n) {
     g_thread_count = n > 0 ? n  : 0;
 }
 
-void ParallelFor(int n, std::function<void(int begin, int end)>& fn) {
+void ParallelFor(int n, const std::function<void(int begin, int end)>& fn) {
     if (n < 0) {
         return;
     }

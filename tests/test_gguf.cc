@@ -104,7 +104,7 @@ static bool TestGgufTensorInfo() {
   MINI_LLAMA_ASSERT_EQ(reader.tensors[0].shape.size(), 2);
   MINI_LLAMA_ASSERT_EQ(reader.tensors[0].shape[0], 128);
   MINI_LLAMA_ASSERT_EQ(reader.tensors[0].shape[1], 32);
-  MINI_LLAMA_ASSERT_EQ(reader.tensors[0].type, kGgmlTypeF32);
+  MINI_LLAMA_ASSERT_EQ(reader.tensors[0].type, GgmlType::kGgmlTypeF32);
   MINI_LLAMA_ASSERT_EQ(reader.tensors[0].offset, 0);
   return true;
 }
@@ -218,11 +218,11 @@ static bool TestGgufDuplicateMetadataKeyRejected() {
   AppendU64Le(data, 2);
 
   AppendString(data, "general.name");
-  AppendU32Le(data, kGgufTypeString);
+  AppendU32Le(data, GgufValueType::kGgufTypeString);
   AppendString(data, "first");
 
   AppendString(data, "general.name");
-  AppendU32Le(data, kGgufTypeString);
+  AppendU32Le(data, GgufValueType::kGgufTypeString);
   AppendString(data, "second");
 
   std::filesystem::path path = TestTempPath("duplicate_metadata.gguf");
@@ -291,20 +291,20 @@ static bool TestGgufTensorDataBoundsChecked() {
 // Type name helpers
 // ---------------------------------------------------------------------------
 static bool TestGgmlTypeName() {
-  MINI_LLAMA_ASSERT_TRUE(std::string(GgmlTypeName(kGgmlTypeF32)) == "F32");
-  MINI_LLAMA_ASSERT_TRUE(std::string(GgmlTypeName(kGgmlTypeF16)) == "F16");
-  MINI_LLAMA_ASSERT_TRUE(std::string(GgmlTypeName(kGgmlTypeQ40)) == "Q4_0");
-  MINI_LLAMA_ASSERT_TRUE(std::string(GgmlTypeName(kGgmlTypeQ80)) == "Q8_0");
+  MINI_LLAMA_ASSERT_TRUE(std::string(GgmlTypeName(GgmlType::kGgmlTypeF32)) == "F32");
+  MINI_LLAMA_ASSERT_TRUE(std::string(GgmlTypeName(GgmlType::kGgmlTypeF16)) == "F16");
+  MINI_LLAMA_ASSERT_TRUE(std::string(GgmlTypeName(GgmlType::kGgmlTypeQ40)) == "Q4_0");
+  MINI_LLAMA_ASSERT_TRUE(std::string(GgmlTypeName(GgmlType::kGgmlTypeQ80)) == "Q8_0");
   MINI_LLAMA_ASSERT_TRUE(std::string(GgmlTypeName(999)) == "UNKNOWN");
   return true;
 }
 
 static bool TestGgufValueTypeName() {
-  MINI_LLAMA_ASSERT_TRUE(std::string(GgufValueTypeName(kGgufTypeUint32)) ==
+  MINI_LLAMA_ASSERT_TRUE(std::string(GgufValueTypeName(GgufValueType::kGgufTypeUint32)) ==
                          "uint32");
-  MINI_LLAMA_ASSERT_TRUE(std::string(GgufValueTypeName(kGgufTypeString)) ==
+  MINI_LLAMA_ASSERT_TRUE(std::string(GgufValueTypeName(GgufValueType::kGgufTypeString)) ==
                          "string");
-  MINI_LLAMA_ASSERT_TRUE(std::string(GgufValueTypeName(kGgufTypeArray)) ==
+  MINI_LLAMA_ASSERT_TRUE(std::string(GgufValueTypeName(GgufValueType::kGgufTypeArray)) ==
                          "array");
   MINI_LLAMA_ASSERT_TRUE(std::string(GgufValueTypeName(999)) == "unknown");
   return true;
