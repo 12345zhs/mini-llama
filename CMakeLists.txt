@@ -103,19 +103,28 @@ set(TEST_SOURCES
 )
 
 # 建立可执行文件
-add_executable(mini-llama-tests ${TEST_SOURCES})
+#测试文件
+add_executable(mini-llama-tests ${TEST_SOURCES})    
+#运行文件                        
+add_executable(mini-llama ${MINI_LLAMA_CORE_SOURCES}  src/main.cc)       
+
+
 
 
 # 设置目标属性
 set_target_properties (mini-llama-tests PROPERTIES
     OUTPUT_NAME mini-llama-tests
 )
-
+set_target_properties (mini-llama PROPERTIES
+    OUTPUT_NAME mini-llama
+)
 
 # 开启 CUDA 时，给测试目标打上宏并链接动态库
 if(MINI_LLAMA_CUDA)
-    target_compile_definitions(mini-llama-tests PRIVATE MINI_LLAMA_USE_CUDA=1)
-    target_link_libraries(mini-llama-tests PRIVATE CUDA::cudart CUDA::cublas)
+    foreach(target mini-llama-tests mini-llama)
+        target_compile_definitions(${target} PRIVATE MINI_LLAMA_USE_CUDA=1)
+        target_link_libraries(${target} PRIVATE CUDA::cudart CUDA::cublas)
+    endforeach()
 endif()
 
 #启动CTest测试
