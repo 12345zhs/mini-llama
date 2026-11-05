@@ -17,7 +17,7 @@ static std::runtime_error CudaNotBuildError() {
 #ifdef MINI_LLAMA_USE_CUDA
 static void CheckCuda(cudaError_t err, const char* expr) {
     if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA runtime error in " + std::string(expr) + ": " + cudaGetErrorString(err))
+        throw std::runtime_error("CUDA runtime error in " + std::string(expr) + ": " + cudaGetErrorString(err));
     }
 }
 
@@ -28,9 +28,9 @@ static cudaMemcpyKind ToCudaMemcpyKind(CudaMemcpyKind kind) {
             return cudaMemcpyHostToDevice;
         }
         case CudaMemcpyKind::kDeviceToHost : {
-            return cudaMemcpyDevideToHost;
+            return cudaMemcpyDeviceToHost;
         }
-        case CudaMemcpyKind::KDeviceToDevice : {
+        case CudaMemcpyKind::kDeviceToDevice : {
             return cudaMemcpyDeviceToDevice;
         }
     }
@@ -51,7 +51,7 @@ bool CudaRuntimeBuilt() {
 int CudaDeviceCount() {
 #ifdef MINI_LLAMA_USE_CUDA
     int count = 0;
-    CheckCuda(CudaGetDeviceCount(&count), "cudaGetDeviceCount");
+    CheckCuda(cudaGetDeviceCount(&count), "cudaGetDeviceCount");
     return count;
 #else 
     throw CudaNotBuildError();
@@ -88,7 +88,7 @@ CudaDeviceInfo CudaGetDeviceInfo(int device_id) {
     info.compute_major = prop.major;                   // 计算能力
     info.compute_minor = prop.minor;
     info.total_memory_bytes = prop.totalGlobalMem;     // 显存大小
-    CheckCuda(cudaDeviceGetVersion(&info.driver_version), "cudaDeviceGetVersion");       // 显卡驱动版本
+    CheckCuda(cudaDriverGetVersion(&info.driver_version), "cudaDriverGetVersion");       // 显卡驱动版本
     CheckCuda(cudaRuntimeGetVersion(&info.runtime_version), "cudaRuntimeGetVersion");     // cuda ToolKit版本
     return info;
 #else 
@@ -142,8 +142,8 @@ void CudaFreeBytes(void* ptr) {
 
 
 // 数据搬运
-void CudaMmecpyBytes(void* dst, const void* src, size_t bytes, CudaMemcpyKind kind) {
-#ifdef MINi_LLAMA_USE_CUDA
+void CudaMemcpyBytes(void* dst, const void* src, size_t bytes, CudaMemcpyKind kind) {
+#ifdef MINI_LLAMA_USE_CUDA
     if (bytes == 0) {
         return;
     }
@@ -232,7 +232,7 @@ void CudaDeviceBuffer::Upload(const void* src, size_t bytes) {
         throw std::runtime_error("CUDA upload exceeds device buffer size");
     }
     CudaSetDevice(device_id_);
-    CudaMmecpyBytes(data_, src, bytes, CudaMemcpyKind::kHostToDevice);
+    CudaMemcpyBytes(data_, src, bytes, CudaMemcpyKind::kHostToDevice);
 
 }
 
@@ -243,7 +243,7 @@ void CudaDeviceBuffer::Download(void* dst, size_t bytes) const {
         throw std::runtime_error("CUDA download exceeds device buffer size");
     }
     CudaSetDevice(device_id_);
-    CudaMmecpyBytes(dst ,data_, bytes, CudaMemcpyKind::kDeviceToHost);
+    CudaMemcpyBytes(dst ,data_, bytes, CudaMemcpyKind::kDeviceToHost);
 }
 
 void* CudaDeviceBuffer::data() {

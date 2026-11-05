@@ -90,7 +90,7 @@ static Tensor AddOptionalBias(const Tensor& x, const Tensor& bias, const char* c
         return x;
     }
 
-    if (x.num_dims() != 1 || bias.num_dims() != 1 || x.shape[0] != bias.num_dims()) {
+    if (x.num_dims() != 1 || bias.num_dims() != 1 || x.shape[0] != bias.shape[0]) {
         throw std::runtime_error(std::string(caller) + " : bias shape mismatch x = " + x.ShapeToStringShort() + " bias =" + bias.ShapeToStringShort());
     }
 

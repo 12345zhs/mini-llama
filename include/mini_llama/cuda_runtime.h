@@ -30,7 +30,7 @@ std::string CudaFormatDeviceInfo(const CudaDeviceInfo& info);
 
 void* CudaMallocBytes(size_t bytes);
 void CudaFreeBytes(void* ptr);
-void CudaMmecpyBytes(void* dst, const void* src, size_t bytes, CudaMemcpyKind kind);
+void CudaMemcpyBytes(void* dst, const void* src, size_t bytes, CudaMemcpyKind kind);
 
 
 
