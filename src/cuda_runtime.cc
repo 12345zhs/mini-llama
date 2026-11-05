@@ -73,7 +73,8 @@ void CudaSetDevice(int device_id) {
 // 显卡信息
 CudaDeviceInfo CudaGetDeviceInfo(int device_id) {
 #ifdef MINI_LLAMA_USE_CUDA
-    int count = cudaGetDeviceCount();
+    int count = 0;
+    CheckCuda(cudaGetDeviceCount(&count),"cudaGetDeviceCount");
     if (device_id < 0 || device_id >= count) {
         throw std::runtime_error("CUDA device " + std::to_string(device_id) + " is not available; detected " + std::to_string(count) + " device(s)");
     }
@@ -148,7 +149,7 @@ void CudaMemcpyBytes(void* dst, const void* src, size_t bytes, CudaMemcpyKind ki
         return;
     }
     if (dst == nullptr || src == nullptr) {
-        throw std::runtime_error("cudaMemcpy requires non-null src and dst for non-empty copies")
+        throw std::runtime_error("cudaMemcpy requires non-null src and dst for non-empty copies");
     }
     CheckCuda(cudaMemcpy(dst, src, bytes, ToCudaMemcpyKind(kind)), "cudaMemcpy");
 #else 

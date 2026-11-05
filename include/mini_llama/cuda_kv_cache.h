@@ -43,7 +43,7 @@ public:
 private:
     void ValidateIndices(int layer, int pos) const;
     void ValidateHeadIndex(int kv_head) const;
-    void ValidataWriteTensors(const Tensor& k, const Tensor& v) const;
+    void ValidateWriteTensors(const Tensor& k, const Tensor& v) const;
     size_t SlotOffsetBytes(int layer, int pos) const;
     size_t HeadOffsetBytes(int layer, int pos, int kv_head) const;
 

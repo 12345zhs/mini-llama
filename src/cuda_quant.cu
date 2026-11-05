@@ -296,7 +296,7 @@ static CudaTensor CudaQ80LinearWithDeviceInput(const CudaTensor& x, const void* 
 
 // linear的Q40权重在cpu端启动，Gpu执行，最后搬运到cpu
 static Tensor CudaQ40LinearWithDevicePointer(const Tensor& x, const void* q4_0_device, size_t q4_0_block_count, const std::vector<int>& weight_shape, const Tensor* bias, int device_id) {
-    static constexpr char* kCaller = "CudaQ40Linear";
+    static constexpr const char* kCaller = "CudaQ40Linear";
     if (q4_0_device == nullptr) {
         throw std::runtime_error("CudaQ80Linear: device weight pointer is null");
     }
@@ -369,7 +369,7 @@ static CudaTensor CudaQ40LinearWithDeviceInput(const CudaTensor& x, const void* 
 
 // linear的Q41权重在cpu端启动，Gpu执行，最后搬运到cpu
 static Tensor CudaQ41LinearWithDevicePointer(const Tensor& x, const void* q4_1_device, size_t q4_1_block_count, const std::vector<int>& weight_shape, const Tensor* bias, int device_id) {
-    static constexpr char* kCaller = "CudaQ41Linear";
+    static constexpr const char* kCaller = "CudaQ41Linear";
     if (q4_1_device == nullptr) {
         throw std::runtime_error(std::string(kCaller) + ": device weight pointer is null");
     }

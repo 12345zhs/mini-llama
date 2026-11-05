@@ -109,7 +109,7 @@ static void AddBiasInPlace(Tensor& y, const Tensor& bias, int rows, int cols) {
         throw std::runtime_error("CudaLinear: expected bias shape [out_features]");
     }
     for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < cols, ++col) {
+        for (int col = 0; col < cols; ++col) {
             y[row * cols + col] += bias.data[col];
         }
     }
@@ -208,7 +208,7 @@ CudaTensor CudaLinearDeviceInputWithDevicePointer(const CudaTensor& x, const voi
     if (w_device == nullptr) {
         throw std::runtime_error("CudaLinearDeviceInput: device weight pointer is null");
     }
-    if (x.device_id() == device_id) {
+    if (x.device_id() != device_id) {
         throw std::runtime_error("CudaLinearDeviceInput: input tensor is on a different CUDA device");
     }
     ValidateLinearShape(x.shape(), x.ShapeStringShort(), w_shape, "CudaLinearDeviceInput");
@@ -266,8 +266,8 @@ Tensor CudaMatmul(const Tensor& a, const Tensor& b, int device_id) {
     CudaDeviceBuffer b_dev(b.size() * sizeof(float), device_id);
     CudaDeviceBuffer c_dev(c.size() * sizeof(float), device_id);
 
-    a_dev.upload(a.data.data(), a.size() * sizeof(float));
-    b_dev.upload(b.data.data(), b.size() * sizeof(float));
+    a_dev.Upload(a.data.data(), a.size() * sizeof(float));
+    b_dev.Upload(b.data.data(), b.size() * sizeof(float));
 
     CublasHandle handle(device_id);
     const float alpha = 1.0f;
@@ -275,12 +275,12 @@ Tensor CudaMatmul(const Tensor& a, const Tensor& b, int device_id) {
     // C^T = B^T * A ^ T
     // [N, M]   =  [N, K]  [K, M]
     CheckCublas(
-        cublasSgemm(handle.get(), CUBLAS_OP_N, CUBLAS_OP_N, n, m, k
+        cublasSgemm(handle.get(), CUBLAS_OP_N, CUBLAS_OP_N, n, m, k,
                     &alpha,
                     static_cast<const float*>(b_dev.data()), n,
                     static_cast<const float*>(a_dev.data()), k,
                     &beta,
-                    static_cast<float*>(c_dev), n);
+                    static_cast<float*>(c_dev.data()), n),
         "cublasSgemm(CudaMatmul)"
     );
     c_dev.Download(c.data.data(), c.size() * sizeof(float));
@@ -302,7 +302,7 @@ Tensor CudaLinear(const Tensor& x, const Tensor& weight, const Tensor* bias, int
         throw std::runtime_error("CudaLinear: expected weight shape [out_features, in_features]");
     }
     CudaDeviceBuffer w_dev(weight.size() * sizeof(float), device_id);
-    w_dev.upload(weight.data.data(), weight.size() * sizeof(float));
+    w_dev.Upload(weight.data.data(), weight.size() * sizeof(float));
     return CudaLinearWithDevicePointer(x, w_dev.data(), weight.shape, bias, device_id);
 #else
     (void)x;

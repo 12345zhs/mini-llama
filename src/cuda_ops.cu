@@ -785,8 +785,8 @@ void CudaRopeDeviceInput(CudaTensor& q, CudaTensor& k, int n_heads, int n_kv_hea
     } else {
         RopeNeoXKernel<<<GridFor(q_pairs), kBlockSize>>>(
             static_cast<float*>(q.data()),
+            n_heads,
             head_dim,
-            pos,
             pos,
             theta
         );
@@ -795,8 +795,8 @@ void CudaRopeDeviceInput(CudaTensor& q, CudaTensor& k, int n_heads, int n_kv_hea
 
         RopeNeoXKernel<<<GridFor(k_pairs), kBlockSize>>>(
             static_cast<float*>(k.data()),
+            n_kv_heads,
             head_dim,
-            pos,
             pos,
             theta
         );

@@ -172,7 +172,7 @@ static __global__ void AttentionReduceKernel(const float* scores, const float* v
 
     // softmax分母
     float local_sum = 0.0f;
-    for (int t = threadIdx.x; t <= pos; t += blockIdx.x) {
+    for (int t = threadIdx.x; t <= pos; t += blockDim.x) {
         local_sum += expf(scores[scores_base + static_cast<size_t>(t)] - max_score);
     }
     partial[threadIdx.x] = local_sum;

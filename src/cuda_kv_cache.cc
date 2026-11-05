@@ -314,7 +314,7 @@ void CudaKvCache::ValidateHeadIndex(int kv_head) const {
 
 
 // 检查写入的张量
-void CudaKvCache::ValidataWriteTensors(const Tensor& k, const Tensor& v) const {
+void CudaKvCache::ValidateWriteTensors(const Tensor& k, const Tensor& v) const {
     if (k.num_dims() != 2 || v.num_dims() != 2 || k.shape != v.shape) {
         throw std::out_of_range("CudaKvCache::Write expected matching [n_kv_heads, head_dim] tensors");
     }

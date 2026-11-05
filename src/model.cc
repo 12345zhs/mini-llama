@@ -356,7 +356,7 @@ void UploadModelWeightsToCuda(MiniLlamaModel& model, int device_id) {
 
     for (size_t layer = 0; layer < model.layers.size(); ++layer) {
         const LayerWeights& lw = model.layers[layer];
-        const std::string prefix = "layers" + std::to_string(layer) + ".";
+        const std::string prefix = "layers." + std::to_string(layer) + ".";
         UploadF32TensorWeight(*storage, lw.attention_norm,  prefix + "attention_norm", device_id);
         UploadLinearWeight(*storage, lw.wq, prefix + "wq", device_id);
         UploadLinearWeight(*storage, lw.wk, prefix + "wk", device_id);
@@ -370,6 +370,7 @@ void UploadModelWeightsToCuda(MiniLlamaModel& model, int device_id) {
         UploadLinearWeight(*storage, lw.w_up, prefix + "w_up", device_id);
         UploadLinearWeight(*storage, lw.w_down, prefix + "w_down", device_id);
     }
+    model.cuda_weights = std::move(storage);  // 保存到 model.cuda_weights
 }
 
 
