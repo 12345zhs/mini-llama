@@ -1209,51 +1209,113 @@ device 0: NVIDIA GeForce RTX 4060
   runtime version: 13010
 ```
 
-## 本次运行结果
+## 性能测试
 
-以下结果来自本次命令记录。`generate` 和 `run` 均正常完成；tiny 模型权重是随机值，因此其解码文本为空不代表推理链路失败。
+本次使用 `models/chat` 中的 Qwen2-0.5B-Instruct Q8_0 GGUF 模型，在 CPU 与 RTX 4060 CUDA 后端上使用相同提示词、生成长度和随机种子进行基准测试。CPU 使用 16 个线程；CUDA 设备为 RTX 4060（Compute Capability 8.9，8 GB）。
 
-| 模式 | 本次观察 |
-| --- | --- |
-| `generate` | CPU、CUDA 均返回 `status=ok` 并生成 64 个 token；tiny 模型的 `generated text` 为空。CUDA 统计显示 21 个权重已上传，且有 Linear、activation 和 attention 调用。 |
-| `run` | CPU 与 CUDA 均返回 `status=ok`。CUDA 的 Qwen2 对话运行上传 291 个权重（约 1.40 GB），168/168 个 Q8_0 Linear 权重已上传；本次回复可读。 |
-| `inspect` | CPU 与 CUDA 均成功显示 tiny 模型配置和 21 个 tensor；CUDA 模式额外报告权重上传信息。 |
-| `inspect-gguf` | 成功读取 GGUF v3 文件，包含 21 个 tensor 和 12 项 metadata。该命令没有 CPU/CUDA 后端选项。 |
-| `bench` | CPU 与 CUDA 均完成 16-token tiny 模型基准；具体性能见下表。 |
-| `--cuda-info` | 检测到 1 个 NVIDIA GeForce RTX 4060，计算能力 8.9，显存约 8 GB。 |
+### CPU
 
-## 实测结果
+```bash
+build/mini-llama bench models/chat --prompt "你好，请用一句话介绍你自己。" -n 32 --seed 1 --backend cpu
+```
 
-本次记录使用 WSL、NVIDIA GeForce RTX 4060（8 GB，Compute Capability 8.9），模型为 `models/tiny`，提示词为 `hello`，`--n-predict 16`、`--seed 1`。CPU 型号未记录。数据是 `bench` 命令输出，吞吐量是程序打印值；不同设备、驱动和运行状态会改变结果。
+终端结果：
 
-| 后端 | Prefill | Decode（15 tokens） | 总耗时 | 总吞吐量 | Decode 吞吐量 |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| CPU | 1.44 ms | 3.58 ms | 5.02 ms | 3,190.06 tokens/s | 4,194.77 tokens/s |
-| CUDA | 125.76 ms | 173.31 ms | 299.07 ms | 53.50 tokens/s | 86.55 tokens/s |
+```text
+GGUF config: vocab=151936 dim=896 layers=24 heads=14 kv_heads=2 head_dim=64 hidden_dim=4864 max_seq_len=32768 rope_theta=1e+06 rms_norm_eps=1e-06
+GGUF config: vocab=151936 dim=896 layers=24 heads=14 kv_heads=2 head_dim=64 hidden_dim=4864 max_seq_len=32768
+GGUF model loaded successfully from models/chat/Qwen2-0.5B-Instruct-Q8_0.gguf
+GGUF tokenizer loaded: vocab=151936 merges=151387 special=3 bos=151643 eos=151645 unk=-1
+Benchmark: models/chat
+  backend: cpu
+  compute: cpu
+  prompt: "你好，请用一句话介绍你自己。" (7 tokens)
+  n_predict: 32
+  seed: 1
+  quant: model-native
+  threads: 16
+  verbose: false
 
-此次 tiny 模型只有约 0.13 MB 权重，CUDA kernel 启动和同步开销超过了计算收益，因此该小模型上 CUDA 实测慢于 CPU。此结果不能代表更大模型的性能。CUDA `run` 日志确认 291 个权重（约 1.40 GB）已上传，Q8_0 Linear 权重为 168/168；修正 NeoX RoPE 参数后，Qwen 聊天能够生成可读回复。
+Results:
+  prompt tokens:     7
+  generated tokens:  32
+  Decode tokens:     31
+  prefill time:      5704.88 ms
+  Decode time:       25038.30 ms
+  total time:        30743.18 ms
+  tokens/s (total):  1.04
+  tokens/s (Decode): 1.24
 
+  weight memory:
+    actual:    1469554176 bytes (1401.48 MB)
+    f32 equiv: 2520669696 bytes (2403.90 MB)
+    savings:   1.72x compression
+```
 
+### CUDA
 
-## 本次运行结果
+```bash
+build/mini-llama bench models/chat --prompt "你好，请用一句话介绍你自己。" -n 32 --seed 1 --backend cuda --device 0
+```
 
-以下结果来自本次命令记录。`generate` 和 `run` 均正常完成；tiny 模型权重是随机值，因此其解码文本为空不代表推理链路失败。
+终端结果：
 
-| 模式 | 本次观察 |
-| --- | --- |
-| `generate` | CPU、CUDA 均返回 `status=ok` 并生成 64 个 token；tiny 模型的 `generated text` 为空。CUDA 统计显示 21 个权重已上传，且有 Linear、activation 和 attention 调用。 |
-| `run` | CPU 与 CUDA 均返回 `status=ok`。CUDA 的 Qwen2 对话运行上传 291 个权重（约 1.40 GB），168/168 个 Q8_0 Linear 权重已上传；本次回复可读。 |
-| `inspect` | CPU 与 CUDA 均成功显示 tiny 模型配置和 21 个 tensor；CUDA 模式额外报告权重上传信息。 |
-| `inspect-gguf` | 成功读取 GGUF v3 文件，包含 21 个 tensor 和 12 项 metadata。该命令没有 CPU/CUDA 后端选项。 |
-| `bench` | CPU 与 CUDA 均完成 16-token tiny 模型基准；具体性能见下表。 |
-| `--cuda-info` | 检测到 1 个 NVIDIA GeForce RTX 4060，计算能力 8.9，显存约 8 GB。 |
+```text
+GGUF config: vocab=151936 dim=896 layers=24 heads=14 kv_heads=2 head_dim=64 hidden_dim=4864 max_seq_len=32768 rope_theta=1e+06 rms_norm_eps=1e-06
+GGUF config: vocab=151936 dim=896 layers=24 heads=14 kv_heads=2 head_dim=64 hidden_dim=4864 max_seq_len=32768
+GGUF model loaded successfully from models/chat/Qwen2-0.5B-Instruct-Q8_0.gguf
+GGUF tokenizer loaded: vocab=151936 merges=151387 special=3 bos=151643 eos=151645 unk=-1
+Benchmark: models/chat
+  backend: cuda
+  cuda: device 0: NVIDIA GeForce RTX 4060, compute capability 8.9, total memory 7.99548 GB, cuda runtime 13010, driver 13010
+  compute: cuda Linear (F32/Q8_0/Q4_0/Q4_1 where uploaded) + CUDA attention over GPU KV cache + device-resident Decode path; CPU sampler
+  prompt: "你好，请用一句话介绍你自己。" (7 tokens)
+  n_predict: 32
+  seed: 1
+  quant: model-native
+  threads: 16
+  verbose: false
 
-## 实测结果
+  uploaded weights: 291
+  gpu memory used: 1469554176 bytes (1401.48MB)
+  cuda f32 Linear weights: 1/169
+  cuda q8_0 Linear weights: 168/168
 
-本次记录使用 WSL、NVIDIA GeForce RTX 4060（8 GB，Compute Capability 8.9），模型为 `models/tiny`，提示词为 `hello`，`--n-predict 16`、`--seed 1`。CPU 型号未记录。数据是 `bench` 命令输出，吞吐量是程序打印值；不同设备、驱动和运行状态会改变结果。
+Results:
+  prompt tokens:     7
+  generated tokens:  32
+  Decode tokens:     31
+  prefill time:      617.07 ms
+  Decode time:       905.28 ms
+  total time:        1522.35 ms
+  tokens/s (total):  21.02
+  tokens/s (Decode): 34.24
 
-| 后端 | Prefill | Decode（15 tokens） | 总耗时 | 总吞吐量 | Decode 吞吐量 |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| CPU | 1.44 ms | 3.58 ms | 5.02 ms | 3,190.06 tokens/s | 4,194.77 tokens/s |
-| CUDA | 125.76 ms | 173.31 ms | 299.07 ms | 53.50 tokens/s | 86.55 tokens/s |
+  weight memory:
+    actual:    1469554176 bytes (1401.48 MB)
+    f32 equiv: 2520669696 bytes (2403.90 MB)
+    savings:   1.72x compression
+
+  cuda runtime:
+    cuda Linear calls: 6422
+    cuda activation calls: 9158
+    cuda attention calls: 912
+    cpu attention fallback calls: 0
+    cuda kv write bytes: 734439407616
+    cuda kv read bytes: 127475712
+    host->device copies: 0 (0 bytes)
+    device->host copies: 38 (23094272 bytes)
+```
+
+### 对比
+
+| 指标 | CPU | CUDA | CUDA 相对表现 |
+| --- | ---: | ---: | ---: |
+| Prefill | 5704.88 ms | 617.07 ms | 约 9.2 倍快 |
+| Decode（31 tokens） | 25038.30 ms | 905.28 ms | 约 27.7 倍快 |
+| 总耗时 | 30743.18 ms | 1522.35 ms | 约 20.2 倍快 |
+| 总吞吐量 | 1.04 tokens/s | 21.02 tokens/s | 约 20.2 倍 |
+| Decode 吞吐量 | 1.24 tokens/s | 34.24 tokens/s | 约 27.6 倍 |
+
+本次 Qwen 模型基准中，CUDA 显著快于 CPU。Qwen 模型的计算量更大，GPU 的并行计算收益足以覆盖 kernel 启动等开销。实测速度会受硬件、驱动和系统负载影响。
 
